@@ -6,6 +6,9 @@ import google.generativeai as genai
 from fetch_coordinates import get_2d_coordinates, get_3d_coordinates, coords_to_pdb
 from dotenv import load_dotenv
 from rdkit import Chem
+from rdkit.Chem import Draw
+import base64
+from io import BytesIO
 
 # Configure logging
 logging.basicConfig(
@@ -46,14 +49,14 @@ except Exception as e:
 @mcp.tool()
 def get_coordinates(query: str) -> dict:
     """
-    Fetch 2D and 3D coordinates and PDB content for a chemical compound given its SMILES or name.
+    Fetch 2D and 3D coordinates, PDB content, and a 2D image for a chemical compound given its SMILES or name.
     Uses Gemini to validate or convert the query to SMILES if needed.
 
     Args:
         query (str): SMILES string, chemical name, or description.
 
     Returns:
-        dict: 2D and 3D coordinates, PDB contents, Gemini response, or error message.
+        dict: 2D and 3D coordinates, PDB contents, 2D image (base64), Gemini response, or error message.
     """
     logger.info(f"Received query: {query}")
     try:
@@ -150,6 +153,35 @@ def get_coordinates(query: str) -> dict:
                 "gemini_message": gemini_result.get("message", "")
             }
 
+        # Generate 2D image
+        try:
+            if mol_2d is None:
+                logger.warning("Invalid molecule for 2D image generation")
+                return {
+                    "status": "error",
+                    "error": "Invalid molecule for 2D image generation",
+                    "gemini_smiles": smiles,
+                    "gemini_message": gemini_result.get("message", ""),
+                    "coordinates_2d": coords_2d,
+                    "pdb_content_2d": pdb_content_2d
+                }
+            # Generate 2D image using RDKit
+            img = Draw.MolToImage(mol_2d, size=(300, 300))
+            buffered = BytesIO()
+            img.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            logger.info("2D image generated successfully")
+        except Exception as e:
+            logger.error(f"Failed to generate 2D image: {str(e)}")
+            return {
+                "status": "error",
+                "error": f"Failed to generate 2D image: {str(e)}",
+                "gemini_smiles": smiles,
+                "gemini_message": gemini_result.get("message", ""),
+                "coordinates_2d": coords_2d,
+                "pdb_content_2d": pdb_content_2d
+            }
+
         # Generate 3D coordinates
         logger.info(f"Generating 3D coordinates for SMILES: {smiles}")
         try:
@@ -162,7 +194,8 @@ def get_coordinates(query: str) -> dict:
                     "gemini_smiles": smiles,
                     "gemini_message": gemini_result.get("message", ""),
                     "coordinates_2d": coords_2d,
-                    "pdb_content_2d": pdb_content_2d
+                    "pdb_content_2d": pdb_content_2d,
+                    "image_2d": img_base64
                 }
             logger.info("3D coordinates generated successfully")
         except Exception as e:
@@ -173,12 +206,12 @@ def get_coordinates(query: str) -> dict:
                 "gemini_smiles": smiles,
                 "gemini_message": gemini_result.get("message", ""),
                 "coordinates_2d": coords_2d,
-                "pdb_content_2d": pdb_content_2d
+                "pdb_content_2d": pdb_content_2d,
+                "image_2d": img_base64
             }
 
         # Generate 3D PDB content
         try:
-            # Verify number of atoms matches coordinates
             if len(coords_3d) != mol_3d.GetNumAtoms():
                 logger.error(f"Mismatch: {len(coords_3d)} coordinates but {mol_3d.GetNumAtoms()} atoms")
                 raise ValueError("Number of 3D coordinates does not match number of atoms")
@@ -192,7 +225,8 @@ def get_coordinates(query: str) -> dict:
                 "gemini_smiles": smiles,
                 "gemini_message": gemini_result.get("message", ""),
                 "coordinates_2d": coords_2d,
-                "pdb_content_2d": pdb_content_2d
+                "pdb_content_2d": pdb_content_2d,
+                "image_2d": img_base64
             }
 
         return {
@@ -203,7 +237,8 @@ def get_coordinates(query: str) -> dict:
             "gemini_smiles": smiles,
             "gemini_message": gemini_result.get("message", ""),
             "pdb_content_2d": pdb_content_2d,
-            "pdb_content_3d": pdb_content_3d
+            "pdb_content_3d": pdb_content_3d,
+            "image_2d": img_base64
         }
     except Exception as e:
         logger.error(f"Server error processing query '{query}': {str(e)}")

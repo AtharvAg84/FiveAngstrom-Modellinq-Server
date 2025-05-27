@@ -1,1 +1,7 @@
 .env
+__pycache__
+myenv
+nglviewer
+
+git config --global user.email "atharv8484@gmail.com"
+  git config --global user.name "Atharv Agarwal"
