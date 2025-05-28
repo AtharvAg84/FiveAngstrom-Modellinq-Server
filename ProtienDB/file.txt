@@ -1,0 +1,8 @@
+
+--- Querying PDB ID: 1OXR ---
+Method: N/A, Resolution: N/A
+
+--- Querying PDB ID: 1TGM ---
+Method: N/A, Resolution: N/A
+
+CSV file 'pdb_experimental_data.csv' has been created.
