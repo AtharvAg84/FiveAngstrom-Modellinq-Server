@@ -9,7 +9,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 import base64
 from io import BytesIO
-
+print("Hi")
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
