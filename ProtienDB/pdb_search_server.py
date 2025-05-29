@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 import base64
 from io import BytesIO
 
-
+path="../.env"
 # Load environment variables
-load_dotenv()
+load_dotenv(path)
 
 # Configure Gemini API
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -100,6 +100,7 @@ def search_pdb_data(query: str, limit: int = 10) -> dict:
 
         # Search for PDB IDs using the class instance
         pdb_ids = pdb_api.search_pdb_ids(search_term)
+        pdb_ids= pdb_ids[:limit] if limit else pdb_ids
         if not pdb_ids:
             return {
                 "status": "error",
