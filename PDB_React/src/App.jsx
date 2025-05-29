@@ -18,73 +18,38 @@ function SearchForm({ onSearch }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-gradient-to-br from-blue-900/80 to-blue-800/80 p-8 rounded-xl shadow-2xl w-full max-w-md backdrop-blur-md border border-blue-700/50 flex flex-col justify-center h-full"
-    >
-      <h2 className="text-3xl font-bold mb-6 text-cyan-300 tracking-tight">PDB Search</h2>
-      <div className="mb-6">
-        <label className="block text-blue-200 mb-2 text-sm font-medium" htmlFor="query">
-          Search Term
-        </label>
+    <form onSubmit={handleSubmit} className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full">
+      <h2 className="text-xl font-semibold mb-3 text-cyan-300">PDB Search</h2>
+      <div className="mb-3">
+        <label className="block text-blue-200 text-xs mb-1" htmlFor="query">Search Term</label>
         <input
           type="text"
           id="query"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Hemoglobin"
-          className="w-full p-3 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-300 glow-on-hover"
+          className="w-full p-2 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded text-xs"
         />
       </div>
-      <div className="mb-6">
-        <label className="block text-blue-200 mb-2 text-sm font-medium" htmlFor="limit">
-          Limit (max results)
-        </label>
+      <div className="mb-3">
+        <label className="block text-blue-200 text-xs mb-1" htmlFor="limit">Limit (max results)</label>
         <input
           type="number"
           id="limit"
           value={limit}
           onChange={(e) => setLimit(e.target.value)}
           min="1"
-          className="w-full p-3 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-300 glow-on-hover"
+          className="w-full p-2 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded text-xs"
         />
       </div>
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full py-3 px-4 rounded-lg text-white font-semibold transition-all duration-300 glow-on-hover ${
-          isLoading
-            ? 'bg-blue-600/50 cursor-not-allowed'
-            : 'bg-cyan-600 hover:bg-cyan-700 hover:shadow-lg hover:shadow-cyan-400/30'
+        className={`w-full py-2 bg-cyan-600 text-white rounded text-xs font-medium ${
+          isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cyan-700'
         }`}
       >
-        {isLoading ? (
-          <span className="flex items-center justify-center">
-            <svg
-              className="animate-spin h-5 w-5 mr-2 text-cyan-300"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-              ></path>
-            </svg>
-            Searching...
-          </span>
-        ) : (
-          'Search'
-        )}
+        {isLoading ? 'Searching...' : 'Search'}
       </button>
     </form>
   );
@@ -118,47 +83,41 @@ function SearchResults({ result }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-900/80 to-blue-800/80 p-8 rounded-xl shadow-2xl w-full max-w-2xl backdrop-blur-md border border-blue-700/50 overflow-y-auto animate-fade-in h-full flex flex-col">
-      <h2 className="text-3xl font-bold mb-6 text-cyan-300 tracking-tight">Search Results</h2>
+    <div className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full mt-4">
+      <h2 className="text-xl font-semibold mb-3 text-cyan-300">Search Results</h2>
       {result.status === 'error' ? (
-        <div className="text-red-400">
-          <p className="text-lg"><strong>Error:</strong> {result.error}</p>
-          {result.gemini_message && (
-            <p className="text-lg"><strong>Message:</strong> {result.gemini_message}</p>
-          )}
+        <div className="text-red-400 text-sm">
+          <p><strong>Error:</strong> {result.error}</p>
+          {result.gemini_message && <p><strong>Message:</strong> {result.gemini_message}</p>}
         </div>
       ) : (
-        <div className="text-blue-100 flex-grow">
-          <p className="mb-4 text-lg">
-            <strong>Search Term:</strong> {result.gemini_search_term}
-          </p>
-          <p className="mb-4 text-lg">
+        <div className="text-blue-100 text-sm">
+          <p className="mb-2"><strong>Search Term:</strong> {result.gemini_search_term}</p>
+          <p className="mb-2">
             <strong>PDB IDs ({result.pdb_ids?.length || 0}):</strong>{' '}
             {result.pdb_ids?.join(', ') || '-'}
           </p>
-          <p className="mb-4 text-lg">
+          <p className="mb-2">
             <strong>Experimental Data ({result.experimental_data?.length || 0} entries):</strong>
           </p>
-          <ul className="list-disc pl-6 mb-6 text-blue-200">
+          <ul className="list-disc pl-5 mb-3 text-blue-200">
             {result.experimental_data?.map((entry, index) => (
-              <li key={index} className="mb-2">
+              <li key={index} className="mb-1">
                 <span className="text-cyan-400">{entry.rcsb_id}</span>: Method=
                 {entry.method || '-'}, Details={entry.details || '-'}
               </li>
             )) || <li>No data available</li>}
           </ul>
-          <p className="mb-4 text-lg">
-            <strong>Message:</strong> {result.gemini_message || '-'}
-          </p>
+          <p className="mb-2"><strong>Message:</strong> {result.gemini_message || '-'}</p>
           {tableData.headers.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-cyan-300">Data Table</h3>
-              <div className="max-h-64 overflow-y-auto rounded-lg border border-blue-700/50">
-                <table className="w-full text-left text-blue-100">
-                  <thead className="bg-blue-950/50 text-cyan-300 sticky top-0">
+            <div className="mb-3">
+              <h3 className="text-base font-semibold mb-2 text-cyan-400">Data Table</h3>
+              <div className="max-h-48 overflow-y-auto border border-blue-600/50 rounded">
+                <table className="w-full text-left text-xs text-blue-100">
+                  <thead className="bg-blue-800/50 text-cyan-400 sticky top-0">
                     <tr>
                       {tableData.headers.map((header, index) => (
-                        <th key={index} className="px-4 py-2 font-medium">
+                        <th key={index} className="px-2 py-1">
                           {header}
                         </th>
                       ))}
@@ -166,12 +125,9 @@ function SearchResults({ result }) {
                   </thead>
                   <tbody>
                     {tableData.rows.map((row, rowIndex) => (
-                      <tr
-                        key={rowIndex}
-                        className="border-t border-blue-700/30 hover:bg-blue-950/30 glow-on-hover transition-all duration-300"
-                      >
+                      <tr key={rowIndex} className="border-t border-blue-600/30 hover:bg-blue-800/30">
                         {tableData.headers.map((header, colIndex) => (
-                          <td key={colIndex} className="px-4 py-2">
+                          <td key={colIndex} className="px-2 py-1">
                             {row[header] || '-'}
                           </td>
                         ))}
@@ -185,7 +141,7 @@ function SearchResults({ result }) {
           {result.csv_data && (
             <button
               onClick={handleDownloadCSV}
-              className="mt-4 py-3 px-6 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold transition-all duration-300 glow-on-hover"
+              className="py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-medium"
             >
               Download CSV
             </button>
@@ -212,12 +168,13 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-row w-full">
-      <div className="w-1/2 p-6 flex items-center justify-center">
+    <div className="flex flex-row w-full min-h-screen">
+      <div className="w-1/2 p-4 flex flex-col items-center overflow-y-auto">
         <SearchForm onSearch={handleSearch} />
+        {result && <SearchResults result={result} />}
       </div>
-      <div className="w-1/2 p-6 flex items-start justify-center">
-        <SearchResults result={result} />
+      <div className="w-1/2 p-4 flex items-center justify-center bg-blue-900/90">
+        <p className="text-blue-200 text-sm">Placeholder for future content</p>
       </div>
     </div>
   );
