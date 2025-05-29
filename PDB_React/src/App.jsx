@@ -19,33 +19,33 @@ function SearchForm({ onSearch }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full">
-      <h2 className="text-xl font-semibold mb-3 text-cyan-300">PDB Search</h2>
+      <h2 className="text-lg font-semibold mb-3 text-cyan-300">PDB Search</h2>
       <div className="mb-3">
-        <label className="block text-blue-200 text-xs mb-1" htmlFor="query">Search Term</label>
+        <label className="block text-gray-200 text-sm mb-1" htmlFor="query">Search Term</label>
         <input
           type="text"
           id="query"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Hemoglobin"
-          className="w-full p-2 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded text-xs"
+          className="w-full p-2 bg-blue-950/50 text-gray-200 border border-blue-600/50 rounded text-sm"
         />
       </div>
       <div className="mb-3">
-        <label className="block text-blue-200 text-xs mb-1" htmlFor="limit">Limit (max results)</label>
+        <label className="block text-gray-200 text-sm mb-1" htmlFor="limit">Limit (max results)</label>
         <input
           type="number"
           id="limit"
           value={limit}
           onChange={(e) => setLimit(e.target.value)}
           min="1"
-          className="w-full p-2 bg-blue-950/50 text-blue-100 border border-blue-600/50 rounded text-xs"
+          className="w-full p-2 bg-blue-950/50 text-gray-200 border border-blue-600/50 rounded text-sm"
         />
       </div>
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full py-2 bg-cyan-600 text-white rounded text-xs font-medium ${
+        className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${
           isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cyan-700'
         }`}
       >
@@ -84,14 +84,14 @@ function SearchResults({ result }) {
 
   return (
     <div className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full mt-4">
-      <h2 className="text-xl font-semibold mb-3 text-cyan-300">Search Results</h2>
+      <h2 className="text-lg font-semibold mb-3 text-cyan-300">Search Results</h2>
       {result.status === 'error' ? (
         <div className="text-red-400 text-sm">
           <p><strong>Error:</strong> {result.error}</p>
           {result.gemini_message && <p><strong>Message:</strong> {result.gemini_message}</p>}
         </div>
       ) : (
-        <div className="text-blue-100 text-sm">
+        <div className="text-gray-200 text-sm">
           <p className="mb-2"><strong>Search Term:</strong> {result.gemini_search_term}</p>
           <p className="mb-2">
             <strong>PDB IDs ({result.pdb_ids?.length || 0}):</strong>{' '}
@@ -100,7 +100,7 @@ function SearchResults({ result }) {
           <p className="mb-2">
             <strong>Experimental Data ({result.experimental_data?.length || 0} entries):</strong>
           </p>
-          <ul className="list-disc pl-5 mb-3 text-blue-200">
+          <ul className="list-disc pl-5 mb-3 text-gray-300">
             {result.experimental_data?.map((entry, index) => (
               <li key={index} className="mb-1">
                 <span className="text-cyan-400">{entry.rcsb_id}</span>: Method=
@@ -112,12 +112,12 @@ function SearchResults({ result }) {
           {tableData.headers.length > 0 && (
             <div className="mb-3">
               <h3 className="text-base font-semibold mb-2 text-cyan-400">Data Table</h3>
-              <div className="max-h-48 overflow-y-auto border border-blue-600/50 rounded">
-                <table className="w-full text-left text-xs text-blue-100">
-                  <thead className="bg-blue-800/50 text-cyan-400 sticky top-0">
+              <div className="overflow-y-auto" style={{ maxHeight: '12rem' }}>
+                <table className="w-full text-left text-sm text-gray-200">
+                  <thead className="bg-blue-800/50 text-cyan-400">
                     <tr>
                       {tableData.headers.map((header, index) => (
-                        <th key={index} className="px-2 py-1">
+                        <th key={index} className="px-3 py-2">
                           {header}
                         </th>
                       ))}
@@ -125,9 +125,9 @@ function SearchResults({ result }) {
                   </thead>
                   <tbody>
                     {tableData.rows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-t border-blue-600/30 hover:bg-blue-800/30">
+                      <tr key={rowIndex} className="border-t border-blue-600/30">
                         {tableData.headers.map((header, colIndex) => (
-                          <td key={colIndex} className="px-2 py-1">
+                          <td key={colIndex} className="px-3 py-2">
                             {row[header] || '-'}
                           </td>
                         ))}
@@ -141,7 +141,7 @@ function SearchResults({ result }) {
           {result.csv_data && (
             <button
               onClick={handleDownloadCSV}
-              className="py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-medium"
+              className="py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-gray-200 rounded text-sm font-medium"
             >
               Download CSV
             </button>
@@ -174,7 +174,7 @@ function App() {
         {result && <SearchResults result={result} />}
       </div>
       <div className="w-1/2 p-4 flex items-center justify-center bg-blue-900/90">
-        <p className="text-blue-200 text-sm">Placeholder for future content</p>
+        <p className="text-gray-200 text-sm">Placeholder for future content</p>
       </div>
     </div>
   );
