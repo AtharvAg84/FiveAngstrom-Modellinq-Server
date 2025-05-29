@@ -158,12 +158,19 @@ function App() {
   const [selectedPdbId, setSelectedPdbId] = useState('');
   const [pdbContent, setPdbContent] = useState('');
   const [pdbFetchError, setPdbFetchError] = useState('');
+  const [viewerFeatures, setViewerFeatures] = useState({
+    backbone: true,
+    cartoon: true,
+    line: false,
+    ballAndStick: false,
+    label: false,
+  });
 
   const handleSearch = async (query, limit) => {
     try {
       const response = await axios.post('http://localhost:8000/search', { query, limit });
       setResult(response.data);
-      setSelectedPdbId(''); // Reset selection on new search
+      setSelectedPdbId('');
       setPdbContent('');
       setPdbFetchError('');
     } catch (error) {
@@ -185,6 +192,7 @@ function App() {
           const response = await axios.get(`http://localhost:8000/fetch-pdb/${selectedPdbId}`);
           setPdbContent(response.data.pdb_content);
           setPdbFetchError('');
+          console.log('Fetched PDB content for:', selectedPdbId);
         } catch (error) {
           console.error('Error fetching PDB content:', error);
           setPdbContent('');
@@ -199,13 +207,34 @@ function App() {
     fetchPdbContent();
   }, [selectedPdbId]);
 
+  // Handle PDB file download
+  const handleDownloadPdb = () => {
+    if (pdbContent && selectedPdbId) {
+      const blob = new Blob([pdbContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedPdbId}.pdb`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // Toggle NGL Viewer features
+  const toggleViewerFeature = (feature) => {
+    setViewerFeatures((prev) => ({
+      ...prev,
+      [feature]: !prev[feature],
+    }));
+  };
+
   return (
     <div className="flex flex-row w-full min-h-screen">
-      <div className="w-1/2 p-4 flex flex-col items-center overflow-y-auto">
+      <div className="w-2/5 p-4 flex flex-col items-center overflow-y-auto">
         <SearchForm onSearch={handleSearch} />
         {result && <SearchResults result={result} />}
       </div>
-      <div className="w-1/2 p-4 flex flex-col bg-gray-800/90">
+      <div className="w-3/5 p-4 flex flex-col bg-gray-800/90">
         {/* PDB ID Scrollable List */}
         <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4 max-h-32 overflow-y-auto">
           <h3 className="text-base font-semibold mb-2 text-cyan-300">PDB IDs</h3>
@@ -237,9 +266,17 @@ function App() {
           {pdbFetchError ? (
             <p className="text-red-400 text-sm">{pdbFetchError}</p>
           ) : pdbContent ? (
-            <pre className="text-gray-200 text-xs overflow-y-auto" style={{ maxHeight: '12rem' }}>
-              {pdbContent}
-            </pre>
+            <>
+              <pre className="text-gray-200 text-xs overflow-y-auto" style={{ maxHeight: '12rem' }}>
+                {pdbContent}
+              </pre>
+              <button
+                onClick={handleDownloadPdb}
+                className="mt-2 py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-gray-200 rounded text-sm font-medium"
+              >
+                Download PDB
+              </button>
+            </>
           ) : (
             <p className="text-gray-300 text-sm">Select a PDB ID to view content</p>
           )}
@@ -249,7 +286,8 @@ function App() {
           <NGLViewer
             pdbContent3D={pdbContent}
             viewMode="3D"
-            features={{ backbone: true, cartoon: true }}
+            features={viewerFeatures}
+            onFeatureToggle={toggleViewerFeature}
           />
         </div>
       </div>
