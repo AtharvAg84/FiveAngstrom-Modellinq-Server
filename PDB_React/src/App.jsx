@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
+import NGLViewer from './NGLViewer';
 
 function SearchForm({ onSearch }) {
   const [query, setQuery] = useState('');
@@ -18,7 +19,7 @@ function SearchForm({ onSearch }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full">
+    <form onSubmit={handleSubmit} className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full">
       <h2 className="text-lg font-semibold mb-3 text-cyan-300">PDB Search</h2>
       <div className="mb-3">
         <label className="block text-gray-200 text-sm mb-1" htmlFor="query">Search Term</label>
@@ -28,7 +29,7 @@ function SearchForm({ onSearch }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Hemoglobin"
-          className="w-full p-2 bg-blue-950/50 text-gray-200 border border-blue-600/50 rounded text-sm"
+          className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
         />
       </div>
       <div className="mb-3">
@@ -39,7 +40,7 @@ function SearchForm({ onSearch }) {
           value={limit}
           onChange={(e) => setLimit(e.target.value)}
           min="1"
-          className="w-full p-2 bg-blue-950/50 text-gray-200 border border-blue-600/50 rounded text-sm"
+          className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
         />
       </div>
       <button
@@ -83,7 +84,7 @@ function SearchResults({ result }) {
   };
 
   return (
-    <div className="bg-blue-900/90 p-4 rounded-md border border-blue-700/50 w-full mt-4">
+    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full mt-4">
       <h2 className="text-lg font-semibold mb-3 text-cyan-300">Search Results</h2>
       {result.status === 'error' ? (
         <div className="text-red-400 text-sm">
@@ -114,7 +115,7 @@ function SearchResults({ result }) {
               <h3 className="text-base font-semibold mb-2 text-cyan-400">Data Table</h3>
               <div className="overflow-y-auto" style={{ maxHeight: '12rem' }}>
                 <table className="w-full text-left text-sm text-gray-200">
-                  <thead className="bg-blue-800/50 text-cyan-400">
+                  <thead className="bg-gray-700/50 text-cyan-400">
                     <tr>
                       {tableData.headers.map((header, index) => (
                         <th key={index} className="px-3 py-2">
@@ -125,7 +126,7 @@ function SearchResults({ result }) {
                   </thead>
                   <tbody>
                     {tableData.rows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-t border-blue-600/30">
+                      <tr key={rowIndex} className="border-t border-gray-600/30">
                         {tableData.headers.map((header, colIndex) => (
                           <td key={colIndex} className="px-3 py-2">
                             {row[header] || '-'}
@@ -173,8 +174,12 @@ function App() {
         <SearchForm onSearch={handleSearch} />
         {result && <SearchResults result={result} />}
       </div>
-      <div className="w-1/2 p-4 flex items-center justify-center bg-blue-900/90">
-        <p className="text-gray-200 text-sm">Placeholder for future content</p>
+      <div className="w-1/2 p-4 flex items-center justify-center bg-gray-800/90">
+        <NGLViewer
+          pdbContent3D={result?.pdb_content || ''}
+          viewMode="3D"
+          features={{ backbone: true, cartoon: true }}
+        />
       </div>
     </div>
   );
