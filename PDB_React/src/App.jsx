@@ -155,39 +155,49 @@ function SearchResults({ result }) {
 
 function App() {
   const [result, setResult] = useState(null);
+  const [selectedPdbId, setSelectedPdbId] = useState('');
   const [pdbContent, setPdbContent] = useState('');
+  const [pdbFetchError, setPdbFetchError] = useState('');
 
   const handleSearch = async (query, limit) => {
     try {
       const response = await axios.post('http://localhost:8000/search', { query, limit });
       setResult(response.data);
+      setSelectedPdbId(''); // Reset selection on new search
+      setPdbContent('');
+      setPdbFetchError('');
     } catch (error) {
       setResult({
         status: 'error',
         error: error.response?.data?.detail || 'Failed to connect to server',
       });
+      setSelectedPdbId('');
+      setPdbContent('');
+      setPdbFetchError('');
     }
   };
 
-  // Fetch PDB content client-side for the first PDB ID
+  // Fetch PDB content for the selected PDB ID
   useEffect(() => {
     const fetchPdbContent = async () => {
-      if (result?.status === 'success' && result.pdb_ids?.length > 0) {
-        const pdbId = result.pdb_ids[0];
+      if (selectedPdbId) {
         try {
-          const response = await axios.get(`https://files.rcsb.org/download/${pdbId}.pdb`);
-          setPdbContent(response.data);
+          const response = await axios.get(`http://localhost:8000/fetch-pdb/${selectedPdbId}`);
+          setPdbContent(response.data.pdb_content);
+          setPdbFetchError('');
         } catch (error) {
           console.error('Error fetching PDB content:', error);
           setPdbContent('');
+          setPdbFetchError(error.response?.data?.detail || 'Failed to fetch PDB file');
         }
       } else {
         setPdbContent('');
+        setPdbFetchError('');
       }
     };
 
     fetchPdbContent();
-  }, [result]);
+  }, [selectedPdbId]);
 
   return (
     <div className="flex flex-row w-full min-h-screen">
@@ -195,12 +205,53 @@ function App() {
         <SearchForm onSearch={handleSearch} />
         {result && <SearchResults result={result} />}
       </div>
-      <div className="w-1/2 p-4 flex items-center justify-center bg-gray-800/90">
-        <NGLViewer
-          pdbContent3D={pdbContent}
-          viewMode="3D"
-          features={{ backbone: true, cartoon: true }}
-        />
+      <div className="w-1/2 p-4 flex flex-col bg-gray-800/90">
+        {/* PDB ID Scrollable List */}
+        <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4 max-h-32 overflow-y-auto">
+          <h3 className="text-base font-semibold mb-2 text-cyan-300">PDB IDs</h3>
+          {result?.status === 'success' && result.pdb_ids?.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {result.pdb_ids.map((pdbId) => (
+                <button
+                  key={pdbId}
+                  onClick={() => setSelectedPdbId(pdbId)}
+                  className={`p-2 rounded text-sm ${
+                    selectedPdbId === pdbId
+                      ? 'bg-cyan-600 text-gray-200'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
+                  }`}
+                >
+                  {pdbId}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-300 text-sm">No PDB IDs available</p>
+          )}
+        </div>
+        {/* PDB Content Display */}
+        <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4">
+          <h3 className="text-base font-semibold mb-2 text-cyan-300">
+            PDB Content: {selectedPdbId || 'None Selected'}
+          </h3>
+          {pdbFetchError ? (
+            <p className="text-red-400 text-sm">{pdbFetchError}</p>
+          ) : pdbContent ? (
+            <pre className="text-gray-200 text-xs overflow-y-auto" style={{ maxHeight: '12rem' }}>
+              {pdbContent}
+            </pre>
+          ) : (
+            <p className="text-gray-300 text-sm">Select a PDB ID to view content</p>
+          )}
+        </div>
+        {/* NGL Viewer */}
+        <div className="flex-grow rounded-md border border-gray-700/50 overflow-hidden">
+          <NGLViewer
+            pdbContent3D={pdbContent}
+            viewMode="3D"
+            features={{ backbone: true, cartoon: true }}
+          />
+        </div>
       </div>
     </div>
   );
