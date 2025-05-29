@@ -127,7 +127,7 @@ function NGLViewer({ pdbContent3D, viewMode, features }) {
       }
 
       if (!isValidPdb(pdbContent3D)) {
-        setViewerError('Invalid 3D PDB format. Ensure the server returns valid PDB data.');
+        setViewerError('Invalid 3D PDB format. Ensure valid PDB data is provided.');
         console.error('Invalid 3D PDB content:', pdbContent3D);
         return;
       }

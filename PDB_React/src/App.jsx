@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import NGLViewer from './NGLViewer';
 
@@ -155,6 +155,7 @@ function SearchResults({ result }) {
 
 function App() {
   const [result, setResult] = useState(null);
+  const [pdbContent, setPdbContent] = useState('');
 
   const handleSearch = async (query, limit) => {
     try {
@@ -168,6 +169,26 @@ function App() {
     }
   };
 
+  // Fetch PDB content client-side for the first PDB ID
+  useEffect(() => {
+    const fetchPdbContent = async () => {
+      if (result?.status === 'success' && result.pdb_ids?.length > 0) {
+        const pdbId = result.pdb_ids[0];
+        try {
+          const response = await axios.get(`https://files.rcsb.org/download/${pdbId}.pdb`);
+          setPdbContent(response.data);
+        } catch (error) {
+          console.error('Error fetching PDB content:', error);
+          setPdbContent('');
+        }
+      } else {
+        setPdbContent('');
+      }
+    };
+
+    fetchPdbContent();
+  }, [result]);
+
   return (
     <div className="flex flex-row w-full min-h-screen">
       <div className="w-1/2 p-4 flex flex-col items-center overflow-y-auto">
@@ -176,7 +197,7 @@ function App() {
       </div>
       <div className="w-1/2 p-4 flex items-center justify-center bg-gray-800/90">
         <NGLViewer
-          pdbContent3D={result?.pdb_content || ''}
+          pdbContent3D={pdbContent}
           viewMode="3D"
           features={{ backbone: true, cartoon: true }}
         />

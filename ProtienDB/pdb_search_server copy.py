@@ -4,6 +4,8 @@ from fastmcp import FastMCP
 import google.generativeai as genai
 from search_data_api import PDBSearchAPI
 from dotenv import load_dotenv
+import base64
+from io import BytesIO
 
 path="../.env"
 # Load environment variables
