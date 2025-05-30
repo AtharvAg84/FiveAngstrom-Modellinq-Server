@@ -4,6 +4,76 @@ import Papa from 'papaparse';
 import * as NGL from 'ngl';
 import './App.css'; // Assuming you have a CSS file for styles
 
+function GeminiChat() {
+  const [chatQuery, setChatQuery] = useState('');
+  const [chatResponse, setChatResponse] = useState(null);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  const handleChatSubmit = async (e) => {
+    e.preventDefault();
+    if (!chatQuery.trim()) {
+      alert('Please enter a chat query');
+      return;
+    }
+    setIsChatLoading(true);
+    try {
+      const response = await axios.post('http://localhost:8000/gemini-chat', { query: chatQuery.trim() });
+      setChatResponse(response.data);
+    } catch (error) {
+      setChatResponse({
+        status: 'error',
+        error: error.response?.data?.detail || 'Failed to connect to Gemini chat server',
+      });
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full mb-4">
+      <h2 className="text-lg font-semibold mb-3 text-cyan-300">Gemini Chat</h2>
+      <form onSubmit={handleChatSubmit}>
+        <div className="mb-3">
+          <label className="block text-gray-200 text-sm mb-1" htmlFor="chatQuery">Ask Gemini</label>
+          <input
+            type="text"
+            id="chatQuery"
+            value={chatQuery}
+            onChange={(e) => setChatQuery(e.target.value)}
+            placeholder="e.g., What is hemoglobin?"
+            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isChatLoading}
+          className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${isChatLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cyan-700'}`}
+        >
+          {isChatLoading ? 'Sending...' : 'Send'}
+        </button>
+      </form>
+      {isChatLoading && (
+        <div className="mt-3">
+          <p className="text-gray-200 text-sm mb-2">Waiting for response...</p>
+          <div className="w-full bg-gray-700/50 rounded-full h-2">
+            <div className="bg-cyan-600 h-2 rounded-full animate-pulse" style={{ width: '50%' }}></div>
+          </div>
+        </div>
+      )}
+      {chatResponse && (
+        <div className="mt-3">
+          <h3 className="text-base font-semibold mb-2 text-cyan-400">Response</h3>
+          {chatResponse.status === 'error' ? (
+            <p className="text-red-400 text-sm">{chatResponse.error}</p>
+          ) : (
+            <p className="text-gray-200 text-sm whitespace-pre-wrap">{chatResponse.response}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SearchForm({ onSearch }) {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(10);
@@ -71,7 +141,7 @@ function SearchResults({ result }) {
   let tableData = { headers: [], rows: [] };
   if (result.csv_data) {
     try {
-      const parsed = window.Papa.parse(result.csv_data, { header: true });
+      const parsed = Papa.parse(result.csv_data, { header: true });
       tableData.headers = parsed.meta.fields || [];
       tableData.rows = parsed.data || [];
     } catch (error) {
@@ -360,6 +430,7 @@ function App() {
   return (
     <div className="flex flex-row w-full min-h-screen">
       <div className="w-2/5 p-4 flex flex-col items-center overflow-y-auto">
+        <GeminiChat />
         <SearchForm onSearch={handleSearch} />
         {result && <SearchResults result={result} />}
       </div>

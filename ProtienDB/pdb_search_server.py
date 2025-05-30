@@ -30,6 +30,46 @@ except Exception as e:
 # Initialize PDBSearchAPI
 pdb_api = PDBSearchAPI()
 
+# Define MCP tool for direct Gemini chat
+@mcp.tool()
+def gemini_chat(query: str) -> dict:
+    """
+    Process a direct query using Gemini AI and return the response.
+    
+    Args:
+        query (str): The user's chat query.
+    
+    Returns:
+        dict: Gemini response or error message.
+    """
+    try:
+        # Validate query length
+        if len(query) > 1000:
+            return {
+                "status": "error",
+                "error": "Query exceeds maximum length of 1000 characters"
+            }
+
+        # Send query to Gemini
+        response = model.generate_content(query)
+
+        # Check Gemini response
+        if not hasattr(response, 'text') or not response.text:
+            return {
+                "status": "error",
+                "error": "Invalid Gemini response: No text content"
+            }
+
+        return {
+            "status": "success",
+            "response": response.text.strip()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Server error: {str(e)}"
+        }
+
 # Define MCP tool
 @mcp.tool()
 def search_pdb_data(query: str, limit: int = 10) -> dict:
