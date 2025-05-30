@@ -17,6 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+path="../.env"
 # Load environment variables
 load_dotenv()
 logger.info("Loading environment variables")
