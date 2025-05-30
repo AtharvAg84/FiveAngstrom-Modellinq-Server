@@ -54,7 +54,7 @@ button {
   cursor: pointer;
 }
 
-/* Checkbox styling for NGL Viewer */
+/* Checkbox styling */
 input[type="checkbox"] {
   appearance: none;
   width: 16px;

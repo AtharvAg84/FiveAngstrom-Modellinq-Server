@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import NGLViewer from './NGLViewer';
+import Papa from 'papaparse';
+import * as NGL from 'ngl';
+import './App.css'; // Assuming you have a CSS file for styles
 
 function SearchForm({ onSearch }) {
   const [query, setQuery] = useState('');
@@ -46,12 +48,18 @@ function SearchForm({ onSearch }) {
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${
-          isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cyan-700'
-        }`}
+        className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cyan-700'}`}
       >
         {isLoading ? 'Searching...' : 'Search'}
       </button>
+      {isLoading && (
+        <div className="mt-3">
+          <p className="text-gray-200 text-sm mb-2">Loading content, please wait...</p>
+          <div className="w-full bg-gray-700/50 rounded-full h-2">
+            <div className="bg-cyan-600 h-2 rounded-full animate-pulse" style={{ width: '50%' }}></div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -113,10 +121,11 @@ function SearchResults({ result }) {
           {tableData.headers.length > 0 && (
             <div className="mb-3">
               <h3 className="text-base font-semibold mb-2 text-cyan-400">Data Table</h3>
-              <div className="overflow-y-auto" style={{ maxHeight: '12rem' }}>
+              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '12rem' }}>
                 <table className="w-full text-left text-sm text-gray-200">
                   <thead className="bg-gray-700/50 text-cyan-400">
                     <tr>
+                      <th className="px-3 py-2">S.No</th>
                       {tableData.headers.map((header, index) => (
                         <th key={index} className="px-3 py-2">
                           {header}
@@ -127,6 +136,7 @@ function SearchResults({ result }) {
                   <tbody>
                     {tableData.rows.map((row, rowIndex) => (
                       <tr key={rowIndex} className="border-t border-gray-600/30">
+                        <td className="px-3 py-2">{rowIndex + 1}</td>
                         {tableData.headers.map((header, colIndex) => (
                           <td key={colIndex} className="px-3 py-2">
                             {row[header] || '-'}
@@ -153,11 +163,133 @@ function SearchResults({ result }) {
   );
 }
 
+function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
+  const stageRef = useRef(null);
+  const viewerRef = useRef(null);
+
+  useEffect(() => {
+    if (!viewerRef.current || isPdbLoading || !pdbContent) return;
+
+    // Initialize NGL Stage
+    if (!stageRef.current) {
+      stageRef.current = new NGL.Stage(viewerRef.current, {
+        backgroundColor: 'black',
+        cameraType: 'perspective',
+      });
+
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        if (stageRef.current) {
+          stageRef.current.handleResize();
+        }
+      });
+    }
+
+    // Load PDB content
+    const loadStructure = async () => {
+      try {
+        // Clear existing components
+        stageRef.current.removeAllComponents();
+
+        // Load PDB as a string
+        const blob = new Blob([pdbContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const structure = await stageRef.current.loadFile(url, { ext: 'pdb' });
+        URL.revokeObjectURL(url);
+
+        // Apply representations based on viewerFeatures
+        if (viewerFeatures.backbone) {
+          structure.addRepresentation('backbone', { sele: 'protein', color: 'blue' });
+        }
+        if (viewerFeatures.cartoon) {
+          structure.addRepresentation('cartoon', { sele: 'protein', color: 'green' });
+        }
+        if (viewerFeatures.line) {
+          structure.addRepresentation('line', { sele: 'all', color: 'grey' });
+        }
+        if (viewerFeatures.ballAndStick) {
+          structure.addRepresentation('ball+stick', { sele: 'not protein', color: 'red' });
+        }
+        if (viewerFeatures.label) {
+          structure.addRepresentation('label', {
+            sele: 'all',
+            labelType: 'resname',
+            color: 'white',
+            scale: 1.0,
+          });
+        }
+
+        // Auto-view the structure
+        stageRef.current.autoView();
+      } catch (error) {
+        console.error('Error loading PDB in NGL:', error);
+      }
+    };
+
+    loadStructure();
+
+    return () => {
+      // Cleanup (avoid memory leaks)
+      if (stageRef.current) {
+        stageRef.current.removeAllComponents();
+      }
+    };
+  }, [pdbContent, viewerFeatures, isPdbLoading]);
+
+  return (
+    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full">
+      <h3 className="text-base font-semibold mb-2 text-cyan-300">3D Structure Viewer</h3>
+      {isPdbLoading ? (
+        <p className="text-gray-200 text-sm">Loading PDB content...</p>
+      ) : pdbContent ? (
+        <div>
+          <div
+            ref={viewerRef}
+            className="w-full"
+            style={{ height: '400px', position: 'relative' }}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {Object.keys(viewerFeatures).map((feature) => (
+              <button
+                key={feature}
+                onClick={() =>
+                  viewerFeatures[feature] &&
+                  Object.values(viewerFeatures).filter((v) => v).length === 1
+                    ? null
+                    : setViewerFeatures((prev) => ({
+                        ...prev,
+                        [feature]: !prev[feature],
+                      }))
+                }
+                className={`py-1 px-3 text-sm rounded ${
+                  viewerFeatures[feature]
+                    ? 'bg-cyan-600 text-gray-200'
+                    : 'bg-gray-700/50 text-gray-300'
+                } ${
+                  viewerFeatures[feature] &&
+                  Object.values(viewerFeatures).filter((v) => v).length === 1
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-cyan-700'
+                }`}
+              >
+                {feature.charAt(0).toUpperCase() + feature.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-gray-300 text-sm">Select a PDB ID to view 3D structure</p>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [result, setResult] = useState(null);
   const [selectedPdbId, setSelectedPdbId] = useState('');
   const [pdbContent, setPdbContent] = useState('');
   const [pdbFetchError, setPdbFetchError] = useState('');
+  const [isPdbLoading, setIsPdbLoading] = useState(false);
   const [viewerFeatures, setViewerFeatures] = useState({
     backbone: true,
     cartoon: true,
@@ -188,6 +320,7 @@ function App() {
   useEffect(() => {
     const fetchPdbContent = async () => {
       if (selectedPdbId) {
+        setIsPdbLoading(true);
         try {
           const response = await axios.get(`http://localhost:8000/fetch-pdb/${selectedPdbId}`);
           setPdbContent(response.data.pdb_content);
@@ -197,10 +330,13 @@ function App() {
           console.error('Error fetching PDB content:', error);
           setPdbContent('');
           setPdbFetchError(error.response?.data?.detail || 'Failed to fetch PDB file');
+        } finally {
+          setIsPdbLoading(false);
         }
       } else {
         setPdbContent('');
         setPdbFetchError('');
+        setIsPdbLoading(false);
       }
     };
 
@@ -220,14 +356,6 @@ function App() {
     }
   };
 
-  // Toggle NGL Viewer features
-  const toggleViewerFeature = (feature) => {
-    setViewerFeatures((prev) => ({
-      ...prev,
-      [feature]: !prev[feature],
-    }));
-  };
-
   return (
     <div className="flex flex-row w-full min-h-screen">
       <div className="w-2/5 p-4 flex flex-col items-center overflow-y-auto">
@@ -239,18 +367,18 @@ function App() {
         <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4 max-h-32 overflow-y-auto">
           <h3 className="text-base font-semibold mb-2 text-cyan-300">PDB IDs</h3>
           {result?.status === 'success' && result.pdb_ids?.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
-              {result.pdb_ids.map((pdbId) => (
+            <div className="grid grid-cols-4 gap-2">
+              {result.pdb_ids.map((pdbId, index) => (
                 <button
                   key={pdbId}
                   onClick={() => setSelectedPdbId(pdbId)}
-                  className={`p-2 rounded text-sm ${
-                    selectedPdbId === pdbId
+                  className={`p-2 rounded text-sm flex items-center ${selectedPdbId === pdbId
                       ? 'bg-cyan-600 text-gray-200'
                       : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
-                  }`}
+                    }`}
                 >
-                  {pdbId}
+                  <span className="mr-2">{index + 1}.</span>
+                  <span>{pdbId}</span>
                 </button>
               ))}
             </div>
@@ -263,7 +391,9 @@ function App() {
           <h3 className="text-base font-semibold mb-2 text-cyan-300">
             PDB Content: {selectedPdbId || 'None Selected'}
           </h3>
-          {pdbFetchError ? (
+          {isPdbLoading ? (
+            <p className="text-gray-200 text-sm">Content is being loaded...</p>
+          ) : pdbFetchError ? (
             <p className="text-red-400 text-sm">{pdbFetchError}</p>
           ) : pdbContent ? (
             <>
@@ -282,14 +412,12 @@ function App() {
           )}
         </div>
         {/* NGL Viewer */}
-        <div className="flex-grow rounded-md border border-gray-700/50 overflow-hidden">
-          <NGLViewer
-            pdbContent3D={pdbContent}
-            viewMode="3D"
-            features={viewerFeatures}
-            onFeatureToggle={toggleViewerFeature}
-          />
-        </div>
+        <NGLViewer
+          pdbContent={pdbContent}
+          viewerFeatures={viewerFeatures}
+          isPdbLoading={isPdbLoading}
+          setViewerFeatures={setViewerFeatures}
+        />
       </div>
     </div>
   );

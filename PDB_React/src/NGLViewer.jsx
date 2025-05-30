@@ -26,7 +26,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (!gl) {
-      setViewerError('WebGL is not supported in your browser. Please enable WebGL or use a compatible browser.');
+      setViewerError('WebGL is not supported. Please enable WebGL or use a compatible browser.');
       console.error('WebGL not supported');
     } else {
       console.log('WebGL is supported');
@@ -38,16 +38,17 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
     if (viewerRef.current && !stageRef.current) {
       try {
         stageRef.current = new NGL.Stage(viewerRef.current, { backgroundColor: '#2a2a2a' });
+        stageRef.current.setSize('100%', '100%'); // Explicitly set size
         const rect = viewerRef.current.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) {
-          setViewerError('Viewer container has zero dimensions. Check CSS styles or parent container size.');
-          console.error('Zero dimensions detected for viewer container', rect);
+          setViewerError('Viewer container has zero dimensions. Check CSS or parent size.');
+          console.error('Zero dimensions detected', rect);
         } else {
-          console.log('NGL Stage initialized successfully', rect);
+          console.log('NGL Stage initialized', rect);
         }
       } catch (err) {
         setViewerError('Failed to initialize NGL Viewer: ' + err.message);
-        console.error('NGL Stage initialization error:', err);
+        console.error('NGL Stage init error:', err);
       }
     }
     return () => {
@@ -64,11 +65,11 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
   // Update representations
   const updateRepresentations = (component, isProtein) => {
     if (!component) {
-      console.error('No component available for representations');
+      console.error('No component for representations');
       return;
     }
     component.removeAllRepresentations();
-    console.log('Updating representations with features:', features);
+    console.log('Updating representations:', features);
 
     if (viewMode === '3D') {
       if (features.backbone) {
@@ -79,7 +80,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           linewidth: 1.0,
           aspectRatio: 1.0,
         });
-        console.log('Added backbone representation');
+        console.log('Added backbone');
       }
       if (features.cartoon) {
         component.addRepresentation('cartoon', {
@@ -87,7 +88,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           color: 'green',
           opacity: 0.8,
         });
-        console.log('Added cartoon representation');
+        console.log('Added cartoon');
       }
       if (features.line) {
         component.addRepresentation('line', {
@@ -95,7 +96,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           color: 'black',
           linewidth: 3,
         });
-        console.log('Added line representation');
+        console.log('Added line');
       }
       if (features.ballAndStick) {
         component.addRepresentation('ball+stick', {
@@ -104,7 +105,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           radius: 0.2,
           aspectRatio: 2.0,
         });
-        console.log('Added ball+stick representation');
+        console.log('Added ball+stick');
       }
       if (features.label) {
         component.addRepresentation('label', {
@@ -116,15 +117,16 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           backgroundColor: 'white',
           backgroundOpacity: 0.8,
         });
-        console.log('Added label representation');
+        console.log('Added label');
       }
       if (!Object.values(features).some((v) => v)) {
-        component.addRepresentation('cartoon', {
-          sele: isProtein ? 'protein' : 'all',
-          color: 'green',
-          opacity: 0.8,
+        component.addRepresentation('ball+stick', {
+          sele: 'all',
+          color: 'element',
+          radius: 0.2,
+          aspectRatio: 2.0,
         });
-        console.log('Added fallback cartoon representation');
+        console.log('Added fallback ball+stick');
       }
     }
     if (stageRef.current) {
@@ -133,45 +135,46 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
     }
   };
 
-  // Load PDB content into NGL Viewer
+  // Load PDB content
   useEffect(() => {
     if (!stageRef.current || viewMode !== '3D') {
-      console.log('Skipping load: no stage or not 3D mode');
+      console.log('Skipping load: no stage or not 3D');
       return;
     }
 
     const loadStructure = async () => {
       stageRef.current.removeAllComponents();
       componentRef.current = null;
-      console.log('Cleared previous components');
+      console.log('Cleared components');
 
       if (!pdbContent3D) {
-        setViewerError('No 3D PDB content available. Please select a PDB ID.');
-        console.log('No PDB content provided');
+        setViewerError('No PDB content available. Please select a PDB ID.');
+        console.log('No PDB content');
         return;
       }
 
       if (!isValidPdb(pdbContent3D)) {
-        setViewerError('Invalid 3D PDB format. Ensure valid PDB data is provided.');
+        setViewerError('Invalid PDB format. Ensure valid PDB data.');
+        console.log('Invalid PDB content:', pdbContent3D.substring(0, 100) + '...');
         return;
       }
 
       setViewerError('');
-      console.log('Loading PDB content:', pdbContent3D.substring(0, 100) + '...');
+      console.log('Loading PDB:', pdbContent3D.substring(0, 100) + '...');
       const blob = new Blob([pdbContent3D], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       try {
         const component = await stageRef.current.loadFile(url, { ext: 'pdb' });
         componentRef.current = component;
-        console.log('PDB file loaded successfully');
+        console.log('PDB loaded successfully');
 
         const isProtein = pdbContent3D.includes('HELIX') || pdbContent3D.includes('SHEET') ||
           pdbContent3D.split('\n').filter(line => line.startsWith('ATOM')).length > 50;
 
         updateRepresentations(component, isProtein);
       } catch (err) {
-        setViewerError(`Failed to load 3D PDB: ${err.message}`);
-        console.error('Error loading 3D PDB:', err);
+        setViewerError(`Failed to load PDB: ${err.message}`);
+        console.error('Load error:', err);
       } finally {
         URL.revokeObjectURL(url);
       }
@@ -182,7 +185,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4">
+      <div className="bg-gray-800/90 p-3 rounded-md border border-gray-700/50 mb-3">
         <h3 className="text-base font-semibold mb-2 text-cyan-300">Viewer Options</h3>
         <div className="grid grid-cols-3 gap-2 text-sm text-gray-200">
           {['backbone', 'cartoon', 'line', 'ballAndStick', 'label'].map((feature) => (
@@ -198,7 +201,7 @@ function NGLViewer({ pdbContent3D, viewMode, features, onFeatureToggle }) {
           ))}
         </div>
       </div>
-      <div className="flex-grow rounded-md border border-gray-700/50 overflow-hidden min-h-[400px]">
+      <div className="flex-grow rounded-md border border-gray-700/50 overflow-hidden min-h-[500px]">
         <div className="w-full h-full" ref={viewerRef}>
           {viewerError && <p className="text-red-400 text-sm text-center p-4">{viewerError}</p>}
         </div>
