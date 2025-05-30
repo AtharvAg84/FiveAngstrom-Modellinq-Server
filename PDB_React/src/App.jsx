@@ -163,12 +163,12 @@ function SearchResults({ result }) {
   );
 }
 
-function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
+function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading, setViewerFeatures }) {
   const stageRef = useRef(null);
   const viewerRef = useRef(null);
 
   useEffect(() => {
-    if (!viewerRef.current || isPdbLoading || !pdbContent) return;
+    if (!viewerRef.current) return;
 
     // Initialize NGL Stage
     if (!stageRef.current) {
@@ -178,15 +178,19 @@ function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
       });
 
       // Handle window resize
-      window.addEventListener('resize', () => {
+      const handleResize = () => {
         if (stageRef.current) {
           stageRef.current.handleResize();
         }
-      });
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
     }
 
     // Load PDB content
     const loadStructure = async () => {
+      if (isPdbLoading || !pdbContent) return;
+
       try {
         // Clear existing components
         stageRef.current.removeAllComponents();
@@ -199,28 +203,33 @@ function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
 
         // Apply representations based on viewerFeatures
         if (viewerFeatures.backbone) {
-          structure.addRepresentation('backbone', { sele: 'protein', color: 'blue' });
+          structure.addRepresentation('backbone', { sele: ':A', color: 'blue', radius: 0.5 });
         }
         if (viewerFeatures.cartoon) {
-          structure.addRepresentation('cartoon', { sele: 'protein', color: 'green' });
+          structure.addRepresentation('cartoon', { sele: ':A', color: 'green', radius: 0.3 });
         }
         if (viewerFeatures.line) {
-          structure.addRepresentation('line', { sele: 'all', color: 'grey' });
+          structure.addRepresentation('line', { sele: 'all', color: 'grey', opacity: 0.7 });
         }
         if (viewerFeatures.ballAndStick) {
-          structure.addRepresentation('ball+stick', { sele: 'not protein', color: 'red' });
+          structure.addRepresentation('ball+stick', {
+            sele: 'not protein and not water',
+            color: 'red',
+            radiusScale: 0.5,
+          });
         }
         if (viewerFeatures.label) {
           structure.addRepresentation('label', {
-            sele: 'all',
+            sele: 'sidechain',
             labelType: 'resname',
             color: 'white',
-            scale: 1.0,
+            scale: 0.8,
+            showBackground: true,
           });
         }
 
         // Auto-view the structure
-        stageRef.current.autoView();
+        stageRef.current.autoView(1000);
       } catch (error) {
         console.error('Error loading PDB in NGL:', error);
       }
@@ -229,12 +238,12 @@ function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
     loadStructure();
 
     return () => {
-      // Cleanup (avoid memory leaks)
+      // Cleanup components (but keep stage for reuse)
       if (stageRef.current) {
         stageRef.current.removeAllComponents();
       }
     };
-  }, [pdbContent, viewerFeatures, isPdbLoading]);
+  }, [pdbContent, isPdbLoading, viewerFeatures]);
 
   return (
     <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full">
@@ -253,24 +262,16 @@ function NGLViewer({ pdbContent, viewerFeatures, isPdbLoading }) {
               <button
                 key={feature}
                 onClick={() =>
-                  viewerFeatures[feature] &&
-                  Object.values(viewerFeatures).filter((v) => v).length === 1
-                    ? null
-                    : setViewerFeatures((prev) => ({
-                        ...prev,
-                        [feature]: !prev[feature],
-                      }))
+                  setViewerFeatures((prev) => ({
+                    ...prev,
+                    [feature]: !prev[feature],
+                  }))
                 }
                 className={`py-1 px-3 text-sm rounded ${
                   viewerFeatures[feature]
                     ? 'bg-cyan-600 text-gray-200'
                     : 'bg-gray-700/50 text-gray-300'
-                } ${
-                  viewerFeatures[feature] &&
-                  Object.values(viewerFeatures).filter((v) => v).length === 1
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-cyan-700'
-                }`}
+                } hover:bg-cyan-700`}
               >
                 {feature.charAt(0).toUpperCase() + feature.slice(1)}
               </button>
@@ -291,7 +292,7 @@ function App() {
   const [pdbFetchError, setPdbFetchError] = useState('');
   const [isPdbLoading, setIsPdbLoading] = useState(false);
   const [viewerFeatures, setViewerFeatures] = useState({
-    backbone: true,
+    backbone: false,
     cartoon: true,
     line: false,
     ballAndStick: false,
