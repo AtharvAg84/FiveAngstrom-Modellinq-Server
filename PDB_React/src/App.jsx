@@ -31,10 +31,10 @@ function GeminiChat() {
 
   return (
     <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full mb-4">
-      <h2 className="text-lg font-semibold mb-3 text-cyan-300">Gemini Chat</h2>
+      <h2 className="text-lg font-semibold mb-3 text-cyan-300">Protien-InfoMania</h2>
       <form onSubmit={handleChatSubmit}>
         <div className="mb-3">
-          <label className="block text-gray-200 text-sm mb-1" htmlFor="chatQuery">Ask Gemini</label>
+          <label className="block text-gray-200 text-sm mb-1" htmlFor="chatQuery">Get Information</label>
           <input
             type="text"
             id="chatQuery"
