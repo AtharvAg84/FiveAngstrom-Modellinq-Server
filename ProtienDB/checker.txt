@@ -1,8 +1,0 @@
-
---- Querying PDB ID: 1OXR ---
-{'rcsb_id': '1OXR', 'method_details': None, 'details': None, 'method': 'X-RAY DIFFRACTION', 'crystals_number': 1}
-
---- Querying PDB ID: 1TGM ---
-{'rcsb_id': '1TGM', 'method_details': None, 'details': None, 'method': 'X-RAY DIFFRACTION', 'crystals_number': 1}
-
-CSV file 'pdb_data.csv' has been created successfully.
