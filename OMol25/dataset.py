@@ -1,78 +1,140 @@
 import os
-from datasets import load_dataset
+import logging
+from fairchem.core.datasets import AseDBDataset
 from rdkit import Chem
-import torch
-from torch.utils.data import DataLoader
-from memory_profiler import profile
-from itertools import islice
+from rdkit.Chem import Descriptors, AllChem
+import numpy as np
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 # Configuration
-HF_TOKEN = os.getenv("HF_TOKEN")  # Ensure HF_TOKEN is set in your environment
-BATCH_SIZE = 32
-MAX_EXAMPLES = 1000  # Limit for demonstration; remove for full dataset
+DATASET_PATH = "./train_4M/"  # Update with actual path
 
-@profile  # Monitor memory usage
-def process_omol25():
-    # Load dataset in streaming mode
-    dataset = load_dataset(
-        "facebook/OMol25",
-        split="train",
-        streaming=True,
-        use_auth_token=HF_TOKEN
-    )
+def get_molecule_details(dataset_path, molecule_index=0, smiles=None):
+    """
+    Retrieve detailed information about a molecule from the OMol25 dataset.
+    
+    Args:
+        dataset_path (str): Path to the dataset directory.
+        molecule_index (int): Index of the molecule in the dataset (used if smiles is None).
+        smiles (str): SMILES string to find a specific molecule (optional).
+    
+    Returns:
+        dict: Dictionary containing molecular details.
+    """
+    try:
+        # Load dataset
+        logger.info(f"Loading dataset from {dataset_path}...")
+        dataset = AseDBDataset(config=dict(src=dataset_path))
+        logger.info("Dataset loaded successfully.")
 
-    # Define processing function for molecular data
-    def process_molecule(example):
-        try:
-            # Convert SMILES to RDKit molecule and compute number of atoms
-            mol = Chem.MolFromSmiles(example["smiles"])
-            num_atoms = mol.GetNumAtoms() if mol else 0
-            # Normalize energy (hypothetical example)
-            energy = example["energy"] / 1000.0 if "energy" in example else 0.0
-            return {
-                "smiles": example["smiles"],
-                "num_atoms": num_atoms,
-                "energy": energy
-            }
-        except:
-            # Handle invalid SMILES
-            return {
-                "smiles": example["smiles"],
-                "num_atoms": 0,
-                "energy": 0.0
-            }
+        # Select molecule
+        if smiles:
+            # Search for molecule by SMILES
+            for i in range(len(dataset)):
+                atoms = dataset.get_atoms(i)
+                if atoms.info.get("smiles") == smiles:
+                    molecule_index = i
+                    break
+            else:
+                logger.error(f"No molecule found with SMILES: {smiles}")
+                return None
+        else:
+            if molecule_index >= len(dataset):
+                logger.error(f"Index {molecule_index} out of range for dataset size {len(dataset)}")
+                return None
 
-    # Apply preprocessing
-    processed_dataset = dataset.map(process_molecule)
+        # Get atoms object
+        atoms = dataset.get_atoms(molecule_index)
+        smiles = atoms.info.get("smiles", "C")  # Fallback SMILES
+        logger.info(f"Processing molecule with SMILES: {smiles}")
 
-    # Create DataLoader for batching
-    def collate_fn(examples):
-        smiles = [ex["smiles"] for ex in examples]
-        num_atoms = torch.tensor([ex["num_atoms"] for ex in examples], dtype=torch.int32)
-        energies = torch.tensor([ex["energy"] for ex in examples], dtype=torch.float32)
-        return {"smiles": smiles, "num_atoms": num_atoms, "energies": energies}
+        # Initialize RDKit molecule
+        mol = Chem.MolFromSmiles(smiles)
+        if not mol:
+            logger.warning(f"Invalid SMILES: {smiles}")
+            return None
 
-    # Wrap dataset in DataLoader
-    dataloader = DataLoader(
-        processed_dataset,
-        batch_size=BATCH_SIZE,
-        collate_fn=collate_fn
-    )
+        # Add hydrogens and compute 3D conformation (optional)
+        mol = Chem.AddHs(mol)
+        AllChem.EmbedMolecule(mol, randomSeed=42)  # Generate 3D coordinates if needed
 
-    # Process batches (limited to MAX_EXAMPLES for demo)
-    example_count = 0
-    for batch in dataloader:
-        # Simulate model inference
-        print(f"Batch SMILES (first 2): {batch['smiles'][:2]}")
-        print(f"Batch Num Atoms (first 2): {batch['num_atoms'][:2]}")
-        print(f"Batch Energies (first 2): {batch['energies'][:2]}")
-        
-        example_count += len(batch["smiles"])
-        if example_count >= MAX_EXAMPLES:
-            break
+        # Extract properties
+        details = {
+            "smiles": smiles,
+            "index": molecule_index,
+            "energy": atoms.info.get("energy", 0.0) / 1000.0,  # Normalize energy (eV)
+            "num_atoms": mol.GetNumAtoms(),
+            "molecular_weight": Descriptors.MolWt(mol),
+            "num_bonds": mol.GetNumBonds(),
+            "num_rings": Chem.GetSSSR(mol),  # Number of rings
+            "logP": Descriptors.MolLogP(mol),  # Partition coefficient
+            "positions": atoms.positions.tolist(),  # 3D coordinates
+            "atomic_numbers": atoms.get_atomic_numbers().tolist(),
+            "atom_symbols": atoms.get_chemical_symbols(),
+            "bonds": [],
+            "formal_charges": [],
+            "degrees": []  # Number of bonds per atom
+        }
 
-    print(f"Processed {example_count} examples.")
+        # Extract bond information
+        for bond in mol.GetBonds():
+            details["bonds"].append({
+                "begin_atom": bond.GetBeginAtomIdx(),
+                "end_atom": bond.GetEndAtomIdx(),
+                "bond_type": str(bond.GetBondType())
+            })
 
-# Run the processing
+        # Extract atom properties
+        for atom in mol.GetAtoms():
+            details["formal_charges"].append(atom.GetFormalCharge())
+            details["degrees"].append(atom.GetDegree())
+
+        # Additional descriptors
+        details["tpsa"] = Descriptors.TPSA(mol)  # Topological polar surface area
+        details["num_h_donors"] = Descriptors.NumHDonors(mol)
+        details["num_h_acceptors"] = Descriptors.NumHAcceptors(mol)
+
+        logger.info(f"Successfully retrieved details for molecule at index {molecule_index}")
+        return details
+
+    except Exception as e:
+        logger.error(f"Error processing molecule: {str(e)}")
+        return None
+
+def print_molecule_details(details):
+    """Pretty-print molecule details."""
+    if not details:
+        print("No molecule details available.")
+        return
+
+    print("\nMolecule Details:")
+    print(f"Index: {details['index']}")
+    print(f"SMILES: {details['smiles']}")
+    print(f"Energy (eV): {details['energy']:.4f}")
+    print(f"Number of Atoms: {details['num_atoms']}")
+    print(f"Molecular Weight: {details['molecular_weight']:.2f} g/mol")
+    print(f"Number of Bonds: {details['num_bonds']}")
+    print(f"Number of Rings: {details['num_rings']}")
+    print(f"LogP: {details['logP']:.4f}")
+    print(f"TPSA (Å²): {details['tpsa']:.2f}")
+    print(f"H-bond Donors: {details['num_h_donors']}")
+    print(f"H-bond Acceptors: {details['num_h_acceptors']}")
+    print("\nAtomic Details:")
+    for i, (symbol, charge, degree) in enumerate(zip(details['atom_symbols'], details['formal_charges'], details['degrees'])):
+        print(f"Atom {i}: {symbol}, Formal Charge: {charge}, Degree: {degree}")
+    print("\n3D Coordinates:")
+    for i, pos in enumerate(details['positions']):
+        print(f"Atom {i}: {pos}")
+    print("\nBonds:")
+    for bond in details['bonds']:
+        print(f"Bond {bond['begin_atom']} - {bond['end_atom']}: {bond['bond_type']}")
+
 if __name__ == "__main__":
-    process_omol25()
+    # Example usage: Get details for molecule at index 0 or by SMILES
+    molecule_index = 0
+    # smiles = "CCO"  # Uncomment to search by SMILES
+    details = get_molecule_details(DATASET_PATH, molecule_index=molecule_index)  # Add smiles=smiles if searching by SMILES
+    print_molecule_details(details)
