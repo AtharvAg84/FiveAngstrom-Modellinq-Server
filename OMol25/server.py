@@ -7,7 +7,6 @@ import google.generativeai as genai
 from fetch_molecule import MoleculeFetcher
 from dotenv import load_dotenv
 from typing import Dict, Optional
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -176,7 +175,7 @@ class MoleculeServer:
             composition (str): Input string (composition, name, or chat query).
             
         Returns:
-            Dict: Molecule data with XYZ content or chat response.
+            Dict: Molecule data with XYZ and PDB content or chat response.
         """
         logger.info(f"Processing input: {composition[:50]}{'...' if len(composition) > 50 else ''}")
         if len(composition) > 100:
@@ -211,19 +210,20 @@ class MoleculeServer:
 
         try:
             xyz_content = self.fetcher.to_xyz(molecule_data)
-            if not xyz_content:
-                logger.error("Failed to generate XYZ content")
+            pdb_content = self.fetcher.to_pdb(molecule_data)
+            if not xyz_content or not pdb_content:
+                logger.error("Failed to generate XYZ or PDB content")
                 return {
                     "status": "error",
-                    "error": "Failed to generate XYZ content",
+                    "error": "Failed to generate XYZ or PDB content",
                     "gemini_composition": validated_composition,
                     "gemini_message": gemini_result.get("message", "")
                 }
         except Exception as e:
-            logger.error(f"XYZ generation error: {str(e)}")
+            logger.error(f"File generation error: {str(e)}")
             return {
                 "status": "error",
-                "error": f"Failed to generate XYZ content: {str(e)}",
+                "error": f"Failed to generate XYZ or PDB content: {str(e)}",
                 "gemini_composition": validated_composition,
                 "gemini_message": gemini_result.get("message", "")
             }
@@ -232,7 +232,9 @@ class MoleculeServer:
             "status": "success",
             "molecule_data": molecule_data,
             "xyz_content": xyz_content,
-            "xyz_filename": f"{validated_composition}_molecule.xyz",  # Use validated composition
+            "pdb_content": pdb_content,
+            "xyz_filename": f"{validated_composition}_molecule.xyz",
+            "pdb_filename": f"{validated_composition}_molecule.pdb",
             "gemini_composition": validated_composition,
             "gemini_message": gemini_result.get("message", "")
         }

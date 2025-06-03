@@ -2,6 +2,8 @@ import psycopg2
 import hashlib
 import logging
 from typing import Dict, Optional
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
 # Configure logging
 logging.basicConfig(
@@ -11,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class MoleculeFetcher:
-    """Class to fetch molecule data from the database and convert to XYZ format."""
+    """Class to fetch molecule data from the database and convert to XYZ or PDB format."""
     
     def __init__(self, db_params: Dict[str, str]):
         """
@@ -129,13 +131,11 @@ class MoleculeFetcher:
             logger.error(f"Mismatch: {len(coordinates)} coordinates, {len(chemical_symbol)} symbols, {num_atoms} atoms")
             return ""
 
-        xyz_lines = [str(num_atoms), chemical_formula]  # Only chemical_formula in comment line
+        xyz_lines = [str(num_atoms), chemical_formula]
         for symbol, coord in zip(chemical_symbol, coordinates):
             try:
-                # Handle list format: [x, y, z]
                 if isinstance(coord, list) and len(coord) >= 3:
                     x, y, z = coord[0], coord[1], coord[2]
-                # Handle dict format: {"x": x, "y": y, "z": z}
                 elif isinstance(coord, dict):
                     x = coord.get("x", 0.0)
                     y = coord.get("y", 0.0)
@@ -149,3 +149,79 @@ class MoleculeFetcher:
                 return ""
 
         return "\n".join(xyz_lines)
+
+    def to_pdb(self, data: Dict) -> str:
+        """
+        Convert molecule data to PDB format using RDKit for bond information.
+        
+        Args:
+            data (dict): Molecule data with num_atoms, chemical_formula, chemical_symbol, coordinates.
+            
+        Returns:
+            str: PDB-formatted string.
+        """
+        if not data or not all(key in data for key in ["num_atoms", "chemical_formula", "chemical_symbol", "coordinates"]):
+            logger.warning("Invalid molecule data for PDB conversion")
+            return ""
+
+        num_atoms = data["num_atoms"]
+        chemical_formula = data["chemical_formula"]
+        chemical_symbol = data["chemical_symbol"]
+        coordinates = data["coordinates"]
+
+        if len(chemical_symbol) != num_atoms or len(coordinates) != num_atoms:
+            logger.error(f"Mismatch: {len(coordinates)} coordinates, {len(chemical_symbol)} symbols, {num_atoms} atoms")
+            return ""
+
+        # Attempt to generate RDKit molecule for bonds
+        try:
+            # Convert chemical formula to SMILES (simplified approach)
+            mol = Chem.MolFromSmiles(chemical_formula.replace("1", ""))  # Remove '1' for SMILES
+            if mol is None:
+                logger.warning("Failed to create RDKit molecule; generating PDB without bonds")
+                mol = None
+            else:
+                AllChem.Compute2DCoords(mol)  # Ensure coordinates are set
+        except Exception as e:
+            logger.warning(f"RDKit error: {str(e)}; generating PDB without bonds")
+            mol = None
+
+        pdb_lines = [
+            f"HEADER    {chemical_formula}",
+            f"TITLE     Structure of {chemical_formula}",
+            "COMPND    MOL"
+        ]
+
+        # Generate ATOM records
+        atom_counts = {}
+        for idx, (symbol, coord) in enumerate(zip(chemical_symbol, coordinates), 1):
+            try:
+                if isinstance(coord, list) and len(coord) >= 3:
+                    x, y, z = coord[0], coord[1], coord[2]
+                elif isinstance(coord, dict):
+                    x = coord.get("x", 0.0)
+                    y = coord.get("y", 0.0)
+                    z = coord.get("z", 0.0)
+                else:
+                    logger.error(f"Invalid coordinate format: {coord}")
+                    return ""
+                
+                atom_counts[symbol] = atom_counts.get(symbol, 0) + 1
+                atom_name = f"{symbol}{atom_counts[symbol]}"
+                pdb_lines.append(
+                    f"ATOM  {idx:>5} {atom_name:<4} MOL     1    {x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           {symbol}"
+                )
+            except Exception as e:
+                logger.error(f"Error processing coordinate {coord}: {str(e)}")
+                return ""
+
+        # Generate CONECT records if RDKit molecule is available
+        if mol:
+            for bond in mol.GetBonds():
+                atom1 = bond.GetBeginAtomIdx() + 1
+                atom2 = bond.GetEndAtomIdx() + 1
+                pdb_lines.append(f"CONECT{atom1:>5}{atom2:>5}")
+                pdb_lines.append(f"CONECT{atom2:>5}{atom1:>5}")
+
+        pdb_lines.append("END")
+        return "\n".join(pdb_lines)
