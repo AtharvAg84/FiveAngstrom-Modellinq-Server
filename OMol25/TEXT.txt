@@ -1,1 +1,0 @@
-<fairchem.core.datasets.ase_datasets.AseDBDataset object at 0x7f1e53b18190>
