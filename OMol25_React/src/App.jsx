@@ -49,7 +49,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="card">
+      <div className="left-column">
         <h1>Molecule Search</h1>
         <p>Enter a chemical composition (e.g., 'C9H8O4'), name (e.g., 'aspirin'), or chat query (e.g., 'hello').</p>
         <form onSubmit={handleSubmit} className="form">
@@ -98,6 +98,14 @@ function App() {
                         Download PDB
                       </button>
                     </div>
+                    <div className="file-content">
+                      <h3>XYZ File Content</h3>
+                      <pre className="file-content-pre">{response.xyz_content}</pre>
+                    </div>
+                    <div className="file-content">
+                      <h3>PDB File Content</h3>
+                      <pre className="file-content-pre">{response.pdb_content}</pre>
+                    </div>
                   </div>
                 )}
               </>
@@ -112,6 +120,10 @@ function App() {
             )}
           </div>
         )}
+      </div>
+      <div className="right-column">
+        <h2>Placeholder</h2>
+        <p>This area is reserved for additional content (e.g., 3D visualization).</p>
       </div>
     </div>
   );

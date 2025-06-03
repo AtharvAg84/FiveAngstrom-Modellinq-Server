@@ -7,37 +7,59 @@ body {
   min-height: 100vh;
   background-color: #f0f0f0;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
+  flex-direction: row;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.left-column,
+.right-column {
+  flex: 1;
+  min-width: 0;
   padding: 24px;
-  width: 100%;
-  max-width: 400px;
+  background-color: white;
+  border-right: 1px solid #ddd;
 }
 
-.card h1 {
+.left-column {
+  border-right: 1px solid #ddd;
+}
+
+.right-column {
+  border-left: none;
+}
+
+.left-column h1 {
   font-size: 24px;
   text-align: center;
   margin-bottom: 16px;
 }
 
-.card p {
+.left-column h2,
+.right-column h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.left-column h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.left-column p,
+.right-column p {
   font-size: 14px;
-  color: #666;
-  text-align: center;
-  margin-bottom: 16px;
+  color: #333;
+  margin: 4px 0;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-bottom: 16px;
 }
 
 .input {
@@ -45,6 +67,8 @@ body {
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input:focus {
@@ -92,24 +116,13 @@ body {
   border-radius: 4px;
 }
 
-.response h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-
-.response p {
-  font-size: 14px;
-  color: #333;
-  text-align: left;
-  margin: 4px 0;
-}
-
 .error-title {
   color: #cc0000;
 }
 
 .download-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
@@ -126,4 +139,42 @@ body {
 
 .download-button:hover {
   background-color: #218838;
+}
+
+.file-content {
+  margin-top: 24px;
+}
+
+.file-content-pre {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: auto;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Stack columns on smaller screens */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .left-column,
+  .right-column {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+  .left-column {
+    border-bottom: 1px solid #ddd;
+  }
+  .right-column {
+    border-bottom: none;
+  }
 }
