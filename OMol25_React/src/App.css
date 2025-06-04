@@ -1,180 +1,72 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
-
 .app-container {
-  min-height: 100vh;
-  background-color: #f0f0f0;
   display: flex;
-  flex-direction: row;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  gap: 20px;
 }
-
-.left-column,
+.left-column {
+  flex: 1;
+  padding: 20px;
+}
 .right-column {
   flex: 1;
-  min-width: 0;
-  padding: 24px;
-  background-color: white;
-  border-right: 1px solid #ddd;
+  padding: 20px;
+  overflow: auto;
 }
-
-.left-column {
-  border-right: 1px solid #ddd;
-}
-
-.right-column {
-  border-left: none;
-}
-
-.left-column h1 {
-  font-size: 24px;
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.left-column h2,
-.right-column h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-
-.left-column h3 {
-  font-size: 16px;
-  margin-bottom: 8px;
-}
-
-.left-column p,
-.right-column p {
-  font-size: 14px;
-  color: #333;
-  margin: 4px 0;
-}
-
 .form {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-
 .input {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 16px;
-  width: 100%;
-  box-sizing: border-box;
+  flex: 1;
 }
-
-.input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
-}
-
-.input:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
 .button {
-  padding: 8px;
+  padding: 8px 16px;
   background-color: #007bff;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 16px;
   cursor: pointer;
 }
-
-.button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
 .button:disabled {
-  background-color: #66b0ff;
+  background-color: #6c757d;
   cursor: not-allowed;
 }
-
 .error {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #ffe6e6;
-  color: #cc0000;
-  border-radius: 4px;
+  color: red;
+  margin-top: 10px;
 }
-
 .response {
-  margin-top: 16px;
-  padding: 16px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
+  margin-top: 20px;
 }
-
-.error-title {
-  color: #cc0000;
-}
-
 .download-buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 10px;
 }
-
 .download-button {
-  padding: 8px 16px;
+  padding: 6px 12px;
   background-color: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 14px;
   cursor: pointer;
 }
-
-.download-button:hover {
-  background-color: #218838;
+.download-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
 }
-
 .file-content {
-  margin-top: 24px;
+  margin-top: 20px;
 }
-
 .file-content-pre {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  padding: 12px;
-  font-family: monospace;
-  font-size: 13px;
-  max-height: 300px;
-  overflow-y: auto;
-  overflow-x: auto;
-  overflow-wrap: break-word;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
   white-space: pre-wrap;
-  box-sizing: border-box;
-  width: 100%;
 }
-
-/* Stack columns on smaller screens */
-@media (max-width: 768px) {
-  .app-container {
-    flex-direction: column;
-  }
-  .left-column,
-  .right-column {
-    flex: none;
-    border-right: none;
-    border-bottom: 1px solid #ddd;
-  }
-  .left-column {
-    border-bottom: 1px solid #ddd;
-  }
-  .right-column {
-    border-bottom: none;
-  }
+.error-title {
+  color: red;
 }
