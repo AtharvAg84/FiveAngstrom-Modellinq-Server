@@ -11,6 +11,10 @@ function App() {
   const [image2D, setImage2D] = useState("");
   const [viewMode, setViewMode] = useState("3D");
   const [viewerError, setViewerError] = useState("");
+
+  const [chemicalLoading, setChemicalLoading] = useState(false);
+  const [structureLoading, setStructureLoading] = useState(false);
+
   const [features, setFeatures] = useState({
     backbone: false,
     cartoon: false,
@@ -309,13 +313,12 @@ function App() {
       setError("Please enter a chemical name or SMILES string.");
       return;
     }
-    setLoading(true);
+    setChemicalLoading(true);
     setError("");
     setResult(null);
     setPdbContent2D("");
     setPdbContent3D("");
     setImage2D("");
-
     try {
       const response = await fetch("http://localhost:8000/get_coordinates", {
         method: "POST",
@@ -326,7 +329,6 @@ function App() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log("API Response:", data);
       setResult(data);
       setPdbContent2D(data.pdb_content_2d || "");
       setPdbContent3D(data.pdb_content_3d || "");
@@ -335,9 +337,8 @@ function App() {
       setError(
         "Failed to connect to the server. Please ensure the bridge and server are running."
       );
-      console.error("Fetch Error:", err);
     } finally {
-      setLoading(false);
+      setChemicalLoading(false);
     }
   };
 
@@ -352,27 +353,27 @@ function App() {
       setError("Number of samples must be at least 1.");
       return;
     }
-    setLoading(true);
+    setStructureLoading(true);
     setError("");
-
+    setProcessId("");
     try {
-      const response = await fetch("http://localhost:8000/generate_structure", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const response = await axios.post("http://localhost:3000/api/sample", {
+        sequence: form.sequence,
+        sample: form.samples,
+        forcefield: form.forceField,
+        grid: form.grid,
+        minimize: form.minimize,
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log("Sidebar Form API Response:", data);
-      setPdbContent3D(data.pdb_content_3d || "");
-      setResult(data);
+      setResult(response.data);
+      setPdbContent3D(response.data.pdb_content_3d || "");
+      setProcessId(response.data.process_id || "Unknown");
     } catch (err) {
-      setError("Failed to connect to the server for structure generation.");
-      console.error("Sidebar Form Fetch Error:", err);
+      setError(
+        err.response?.data?.detail ||
+          "Failed to connect to the server for structure generation."
+      );
     } finally {
-      setLoading(false);
+      setStructureLoading(false);
     }
   };
 
@@ -489,12 +490,12 @@ function App() {
             />
             <button
               type="submit"
-              disabled={loading}
+              disabled={chemicalLoading}
               className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 disabled:bg-blue-300"
             >
-              {loading ? "Processing..." : "Ready. Steady.. Go..."}
+              {chemicalLoading ? "Processing..." : "Ready. Steady.. Go..."}
             </button>
-            {loading && (
+            {chemicalLoading && (
               <div className="mt-2">
                 <div className="progress-bar">
                   <div className="progress-bar-inner"></div>
@@ -606,7 +607,7 @@ function App() {
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="form-field">
               <label htmlFor="seq" className="block text-sm font-medium">
-                Sequence
+                Sequence *(Capital)
               </label>
               <div className="relative">
                 <textarea
@@ -701,18 +702,32 @@ function App() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={structureLoading}
               className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 disabled:bg-blue-300 flex items-center justify-center"
             >
-              <i className="fas fa-play mr-2"></i>
-              Generate
+              {structureLoading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-play mr-2"></i>
+                  Generate Multiple Structure
+                </>
+              )}
             </button>
+            {structureLoading && (
+              <p className="text-blue-500 text-center mt-1">
+                Generating protein structure, please wait...
+              </p>
+            )}
           </form>
           <h2 className="text-xl font-bold mt-4">3D Visualization Options</h2>
           <div className="flex flex-col space-y-2">
             {[
               // { name: "Backbone", key: "backbone" },
-              // { name: "Cartoon", key: "cartoon" },q
+              // { name: "Cartoon", key: "cartoon" },
               { name: "Line", key: "line" },
               { name: "Ball+Stick", key: "ballAndStick" },
               { name: "Label", key: "label" },
