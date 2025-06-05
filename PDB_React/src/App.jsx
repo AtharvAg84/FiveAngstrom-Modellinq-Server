@@ -299,7 +299,6 @@ function NGLViewer({
   rotationActive,
   setRotationActive,
   colorScheme,
-  nglReloadKey, // Add reload key
 }) {
   const stageRef = useRef(null);
   const viewerRef = useRef(null);
@@ -406,7 +405,7 @@ function NGLViewer({
         stageRef.current.removeAllComponents();
       }
     };
-  }, [pdbContent, isPdbLoading, viewerFeatures, colorScheme, nglReloadKey]); // Add nglReloadKey
+  }, [pdbContent, isPdbLoading, viewerFeatures, colorScheme]);
 
   useEffect(() => {
     let animationId;
@@ -625,6 +624,7 @@ function Sidebar({
             {Object.keys(viewerFeatures).map((feature) => (
               <button
                 key={feature}
+                type="button" // Prevent form submission
                 onClick={() =>
                   setViewerFeatures((prev) => ({
                     ...prev,
@@ -687,7 +687,6 @@ function App() {
   const [rotationActive, setRotationActive] = useState(false);
   const [colorScheme, setColorScheme] = useState("default");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [nglReloadKey, setNglReloadKey] = useState(0); // Add reload key
 
   const handleSearch = async (query, limit) => {
     try {
@@ -791,10 +790,7 @@ function App() {
               {result.pdb_ids.map((pdbId, index) => (
                 <button
                   key={pdbId}
-                  onClick={() => {
-                    setSelectedPdbId(pdbId);
-                    setNglReloadKey((k) => k + 1); // Increment reload key
-                  }}
+                  onClick={() => setSelectedPdbId(pdbId)}
                   className={`p-2 rounded text-sm flex items-center ${
                     selectedPdbId === pdbId
                       ? "bg-cyan-600 text-gray-200"
@@ -847,7 +843,6 @@ function App() {
           rotationActive={rotationActive}
           setRotationActive={setRotationActive}
           colorScheme={colorScheme}
-          nglReloadKey={nglReloadKey} // Pass reload key
         />
       </div>
     </div>
