@@ -131,7 +131,7 @@ async def main():
                 print(f"Nullable: {info['is_nullable']}")
             elif "stats" in result:
                 stats = result["stats"]
-                print("Database atistics:")
+                print("Database Statistics:")
                 print(f"Total Tables: {stats['total_tables']}")
                 print(f"Total Rows: {stats['total_rows']}")
             elif "search_results" in result:
