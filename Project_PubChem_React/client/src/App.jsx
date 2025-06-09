@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import * as NGL from "ngl";
+import axios from "axios";
+import JSZip from "jszip";
 
 function App() {
   const [query, setQuery] = useState("");
@@ -11,10 +13,8 @@ function App() {
   const [image2D, setImage2D] = useState("");
   const [viewMode, setViewMode] = useState("3D");
   const [viewerError, setViewerError] = useState("");
-
   const [chemicalLoading, setChemicalLoading] = useState(false);
   const [structureLoading, setStructureLoading] = useState(false);
-
   const [features, setFeatures] = useState({
     backbone: false,
     cartoon: false,
@@ -32,7 +32,7 @@ function App() {
   const [form, setForm] = useState({
     sequence: "",
     samples: 1,
-    forceField: "amber03.xml",
+    forceField: "amber03",
     grid: "1",
     minimize: "0",
   });
@@ -40,8 +40,12 @@ function App() {
   const stageRef = useRef(null);
   const viewerRef = useRef(null);
   const componentRef = useRef(null);
+  const [processId, setProcessId] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [simulationProgress, setSimulationProgress] = useState(0);
+  const [resultFolderLocation, setResultFolderLocation] = useState("");
+  const [firstPdbContent, setFirstPdbContent] = useState("");
 
-  // Available color options
   const colorOptions = [
     "red",
     "blue",
@@ -59,7 +63,14 @@ function App() {
     "sstruc",
   ];
 
-  // Validate PDB content
+  const forceFieldMap = {
+    AMBER03: "amber03",
+    AMBER10: "amber10",
+    AMBER96: "amber96",
+    AMBER99sb: "amber99-sb",
+    AMBERFB15: "amber-fb15",
+  };
+
   const isValidPdb = (content) => {
     if (!content || typeof content !== "string") {
       console.log("PDB validation failed: Content is empty or not a string");
@@ -75,15 +86,13 @@ function App() {
     return hasAtoms;
   };
 
-  // Validate sequence
   const validateSequence = (sequence) => {
-    const validAminoAcids = /^[A-Z]*$/;
+    const validAminoAcids = /^[A-Za-z]*$/;
     const isValid = sequence === "" || validAminoAcids.test(sequence);
     setInvalidSequence(!isValid);
     return isValid;
   };
 
-  // Check WebGL availability
   useEffect(() => {
     const canvas = document.createElement("canvas");
     const gl =
@@ -96,14 +105,13 @@ function App() {
     }
   }, []);
 
-  // Initialize NGL Stage with black background
   useEffect(() => {
     const initNGL = () => {
       if (viewerRef.current && !stageRef.current) {
         console.log("Initializing NGL Stage");
         try {
           stageRef.current = new NGL.Stage(viewerRef.current, {
-            backgroundColor: "black", // Set background to black
+            backgroundColor: "black",
           });
           const rect = viewerRef.current.getBoundingClientRect();
           console.log("Viewer container dimensions:", {
@@ -135,7 +143,6 @@ function App() {
     };
   }, []);
 
-  // Toggle feature state
   const toggleFeature = (feature) => {
     setFeatures((prev) => ({
       ...prev,
@@ -143,7 +150,6 @@ function App() {
     }));
   };
 
-  // Update color for a specific feature
   const updateColor = (feature, color) => {
     setColors((prev) => ({
       ...prev,
@@ -151,7 +157,6 @@ function App() {
     }));
   };
 
-  // Update representations with enhanced color options
   const updateRepresentations = (component, isProtein) => {
     if (!component) return;
     component.removeAllRepresentations();
@@ -228,7 +233,6 @@ function App() {
     }
   };
 
-  // Load PDB content into NGL Viewer
   useEffect(() => {
     if (!stageRef.current) {
       console.log("NGL Stage not initialized");
@@ -294,7 +298,6 @@ function App() {
     loadStructure();
   }, [pdbContent3D, viewMode]);
 
-  // Update representations when features or colors change
   useEffect(() => {
     if (componentRef.current && stageRef.current && viewMode === "3D") {
       const isProtein =
@@ -306,7 +309,6 @@ function App() {
     }
   }, [features, colors, viewMode, pdbContent3D]);
 
-  // Handle chemical query submission
   const handleQuerySubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) {
@@ -342,42 +344,253 @@ function App() {
     }
   };
 
-  // Handle sidebar form submission
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
+  const validateInputs = () => {
     if (!validateSequence(form.sequence)) {
       setError("Please enter a valid amino acid sequence.");
-      return;
+      return false;
     }
-    if (form.samples < 1) {
-      setError("Number of samples must be at least 1.");
-      return;
+    if (form.samples < 1 || form.samples > 1000) {
+      setError("Number of samples must be between 1 and 1000.");
+      return false;
     }
-    setStructureLoading(true);
-    setError("");
-    setProcessId("");
+    return true;
+  };
+
+  const sendSimulationRequest = async () => {
+    const payload = {
+      sequence: form.sequence.toUpperCase(),
+      sample: parseInt(form.samples),
+      forcefield: form.forceField,
+      grid: form.grid,
+    };
+
     try {
-      const response = await axios.post("http://localhost:3000/api/sample", {
-        sequence: form.sequence,
-        sample: form.samples,
-        forcefield: form.forceField,
-        grid: form.grid,
-        minimize: form.minimize,
-      });
-      setResult(response.data);
-      setPdbContent3D(response.data.pdb_content_3d || "");
-      setProcessId(response.data.process_id || "Unknown");
+      const response = await axios.post("http://localhost:3000/api/sample", payload);
+      console.log("Simulation Request HTTP Status Code:", response.status);
+      console.log("Simulation Request Raw Response:", response.data);
+      const processId = response.data.toString().trim();
+      if (!processId) {
+        setError("Empty process ID received from server.");
+        console.log("Warning: Empty process ID");
+        return null;
+      }
+      console.log("Process ID received:", processId);
+      setProcessId(processId);
+      return processId;
     } catch (err) {
       setError(
         err.response?.data?.detail ||
           "Failed to connect to the server for structure generation."
       );
+      console.error("Error sending simulation request:", err);
+      return null;
+    }
+  };
+
+  const pollStatus = async (processId, maxDuration = 300, pollInterval = 3, maxInvalidResponses = 10) => {
+    const startTime = Date.now();
+    let invalidResponseCount = 0;
+
+    console.log("Starting status polling for process ID:", processId);
+    setStatusMessage("Waiting for server to register the process...");
+    setSimulationProgress(10);
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    while ((Date.now() - startTime) / 1000 < maxDuration) {
+      try {
+        const response = await axios.get(`http://localhost:3000/api/status?id=${processId}`, {
+          headers: {
+            Accept: "text/plain, application/json, */*",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+          timeout: 10000,
+        });
+
+        console.log("Poll HTTP Status:", response.status);
+        console.log("Poll Response:", response.data);
+
+        if (response.status === 200) {
+          const newStatus = response.data.toString().trim();
+          if (newStatus && !["", "null", "undefined", "not found html"].includes(newStatus.toLowerCase())) {
+            invalidResponseCount = 0;
+            if (newStatus !== statusMessage) {
+              setStatusMessage(newStatus);
+              const statusLower = newStatus.toLowerCase();
+              if (statusLower.includes("waiting") || statusLower.includes("queue")) {
+                setSimulationProgress(10);
+              } else if (statusLower.includes("generating") || statusLower.includes("sample")) {
+                setSimulationProgress(33);
+              } else if (statusLower.includes("minimizing") || statusLower.includes("minimize")) {
+                setSimulationProgress(66);
+              } else if (
+                statusLower.includes("completed") ||
+                statusLower.includes("complete") ||
+                statusLower.includes("done")
+              ) {
+                setSimulationProgress(100);
+                setStatusMessage("Simulation completed successfully!");
+                return true;
+              } else if (
+                statusLower.includes("error") ||
+                statusLower.includes("failed") ||
+                statusLower.includes("fail")
+              ) {
+                setError(`Simulation failed: ${newStatus}`);
+                return false;
+              }
+            }
+          } else {
+            invalidResponseCount++;
+            console.log(`Invalid response #${invalidResponseCount}:`, newStatus);
+          }
+        } else if (response.status === 404) {
+          invalidResponseCount++;
+          console.log("Process ID not found, retrying...");
+        } else {
+          invalidResponseCount++;
+          console.log("Unexpected HTTP status:", response.status);
+        }
+      } catch (err) {
+        invalidResponseCount++;
+        console.error("Poll error:", err);
+      }
+
+      if (invalidResponseCount >= maxInvalidResponses) {
+        setError(`Too many invalid responses (${invalidResponseCount}). Aborting polling.`);
+        return false;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+    }
+
+    setError(`Polling timed out after ${maxDuration} seconds. Last status: ${statusMessage}`);
+    return false;
+  };
+
+  const loadFirstSample = async (processId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_0000.pdb`,
+        {
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        }
+      );
+      console.log("First Sample HTTP Status:", response.status);
+      console.log("First Sample Response:", response.data.slice(0, 100), "...");
+      setFirstPdbContent(response.data);
+      return response.data;
+    } catch (err) {
+      setError("Failed to load first sample PDB.");
+      console.error("Error fetching first sample:", err);
+      return null;
+    }
+  };
+
+  const downloadData = async (processId, samples) => {
+    const zip = new JSZip();
+    const folder = zip.folder(processId).folder("sample");
+
+    for (let i = 0; i < samples; i++) {
+      const paddedNumber = i.toString().padStart(4, "0");
+      const sampleUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_${paddedNumber}.pdb`;
+      try {
+        const response = await axios.get(sampleUrl);
+        console.log(`Sample ${paddedNumber} HTTP Status:`, response.status);
+        if (response.data) {
+          folder.file(`sample_${paddedNumber}.pdb`, response.data);
+        }
+      } catch (err) {
+        console.error(`Error fetching sample ${paddedNumber}:`, err);
+      }
+    }
+
+    try {
+      const sampleOutUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sampled.out`;
+      const response = await axios.get(sampleOutUrl);
+      console.log("Sampled.out HTTP Status:", response.status);
+      if (response.data) {
+        folder.file("sampled.out", response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching sampled.out:", err);
+    }
+
+    try {
+      const content = await zip.generateAsync({ type: "blob" });
+      let savePath = "";
+
+      if (window.showDirectoryPicker) {
+        try {
+          const dirHandle = await window.showDirectoryPicker();
+          const fileHandle = await dirHandle.getFileHandle(`${processId}.zip`, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          savePath = dirHandle.name;
+        } catch (err) {
+          console.error("Error saving with File System Access API:", err);
+          setError("Failed to save results folder. Falling back to download.");
+        }
+      }
+
+      if (!savePath) {
+        const url = URL.createObjectURL(content);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${processId}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        savePath = "Browser Downloads";
+      }
+
+      setResultFolderLocation(savePath);
+      return true;
+    } catch (err) {
+      setError("Failed to generate or save ZIP file.");
+      console.error("Error generating ZIP:", err);
+      return false;
+    }
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateInputs()) {
+      return;
+    }
+
+    setStructureLoading(true);
+    setError("");
+    setProcessId("");
+    setStatusMessage("");
+    setSimulationProgress(0);
+    setResultFolderLocation("");
+    setFirstPdbContent("");
+
+    try {
+      const processId = await sendSimulationRequest();
+      if (!processId) {
+        setStructureLoading(false);
+        return;
+      }
+
+      const success = await pollStatus(processId);
+      if (!success) {
+        setStructureLoading(false);
+        return;
+      }
+
+      await loadFirstSample(processId);
+      await downloadData(processId, form.samples);
+    } catch (err) {
+      setError("Error in simulation workflow: " + err.message);
+      console.error("Simulation workflow error:", err);
     } finally {
       setStructureLoading(false);
     }
   };
 
-  // Update form state
   const handleFormChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (field === "sequence") {
@@ -385,7 +598,6 @@ function App() {
     }
   };
 
-  // Download PDB
   const downloadPDB = (type) => {
     console.log(`downloadPDB called for ${type}`);
     try {
@@ -419,7 +631,6 @@ function App() {
     }
   };
 
-  // Download 2D Image
   const downloadImage2D = () => {
     console.log("downloadImage2D called");
     try {
@@ -452,8 +663,6 @@ function App() {
             Enter a SMILES string, chemical name, or description to get 2D and
             3D coordinates.
           </p>
-          {/* // Inside the App component, add this CSS for the progress bar (you
-          can also put it in a separate CSS file) */}
           <style jsx>{`
             .progress-bar {
               width: 100%;
@@ -465,21 +674,10 @@ function App() {
             .progress-bar-inner {
               height: 100%;
               background-color: #3b82f6;
-              animation: progress 2s infinite;
-            }
-            @keyframes progress {
-              0% {
-                width: 0%;
-              }
-              50% {
-                width: 80%;
-              }
-              100% {
-                width: 0%;
-              }
+              width: ${simulationProgress}%;
+              transition: width 0.3s ease-in-out;
             }
           `}</style>
-          {/* // Update the form section in the return statement */}
           <form onSubmit={handleQuerySubmit} className="space-y-2">
             <input
               type="text"
@@ -619,7 +817,7 @@ function App() {
                   }`}
                   placeholder="Amino Acid Sequence"
                   rows="1"
-                  disabled={loading}
+                  disabled={structureLoading}
                   required
                 />
                 {invalidSequence && (
@@ -643,7 +841,8 @@ function App() {
                 className="w-full p-2 border rounded-md"
                 placeholder="No. of Samples"
                 min="1"
-                disabled={loading}
+                max="1000"
+                disabled={structureLoading}
                 required
               />
             </div>
@@ -656,13 +855,13 @@ function App() {
                 value={form.forceField}
                 onChange={(e) => handleFormChange("forceField", e.target.value)}
                 className="w-full p-2 border rounded-md"
-                disabled={loading}
+                disabled={structureLoading}
               >
-                <option value="amber03.xml">AMBER03</option>
-                <option value="amber10.xml">AMBER10</option>
-                <option value="amber96.xml">AMBER96</option>
-                <option value="amber99sb.xml">AMBER99sb</option>
-                <option value="amberfb15.xml">AMBERFB15</option>
+                <option value="amber03">AMBER03</option>
+                <option value="amber10">AMBER10</option>
+                <option value="amber96">AMBER96</option>
+                <option value="amber99-sb">AMBER99sb</option>
+                <option value="amber-fb15">AMBERFB15</option>
               </select>
             </div>
             <div className="form-field">
@@ -674,7 +873,7 @@ function App() {
                 value={form.grid}
                 onChange={(e) => handleFormChange("grid", e.target.value)}
                 className="w-full p-2 border rounded-md"
-                disabled={loading}
+                disabled={structureLoading}
               >
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -691,7 +890,7 @@ function App() {
                 value={form.minimize}
                 onChange={(e) => handleFormChange("minimize", e.target.value)}
                 className="w-full p-2 border rounded-md"
-                disabled={loading}
+                disabled={structureLoading}
               >
                 <option value="0">None</option>
                 <option value="5">Top 5</option>
@@ -718,16 +917,42 @@ function App() {
               )}
             </button>
             {structureLoading && (
-              <p className="text-blue-500 text-center mt-1">
-                Generating protein structure, please wait...
+              <div className="mt-2">
+                <div className="progress-bar">
+                  <div className="progress-bar-inner"></div>
+                </div>
+                <p className="text-blue-500 text-center mt-1">
+                  {statusMessage || "Generating protein structure, please wait..."}
+                </p>
+              </div>
+            )}
+            {processId && (
+              <p className="text-gray-700 text-center mt-1">
+                <strong>Process ID:</strong> {processId}
+              </p>
+            )}
+            {statusMessage && !structureLoading && (
+              <p className="text-gray-700 text-center mt-1">
+                <strong>Status:</strong> {statusMessage}
+              </p>
+            )}
+            {resultFolderLocation && (
+              <p className="text-gray-700 text-center mt-1">
+                <strong>Results Saved At:</strong> {resultFolderLocation}
               </p>
             )}
           </form>
+          {firstPdbContent && (
+            <div className="mt-4">
+              <h2 className="text-xl font-bold">First Sample PDB Content</h2>
+              <pre className="bg-gray-200 rounded-md overflow-auto max-h-60 p-2">
+                {firstPdbContent}
+              </pre>
+            </div>
+          )}
           <h2 className="text-xl font-bold mt-4">3D Visualization Options</h2>
           <div className="flex flex-col space-y-2">
             {[
-              // { name: "Backbone", key: "backbone" },
-              // { name: "Cartoon", key: "cartoon" },
               { name: "Line", key: "line" },
               { name: "Ball+Stick", key: "ballAndStick" },
               { name: "Label", key: "label" },

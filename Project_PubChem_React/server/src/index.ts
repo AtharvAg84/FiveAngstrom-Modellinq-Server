@@ -122,7 +122,8 @@ class Scheduler {
             '-s', process.sequence,
             '-n', process.sample.toString(),
             '-f', process.forcefield,
-            '-g', process.grid.toString()
+            '-m', 'fold',
+            '-t', '300'
         ];
 
         console.log('Executing Sampling Command:', ['dncs', ...args]);
