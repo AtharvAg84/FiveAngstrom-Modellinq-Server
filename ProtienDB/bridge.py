@@ -158,6 +158,29 @@ async def fetch_pdb(pdb_id: str):
         logger.error(f"Error fetching PDB file for {pdb_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching PDB file: {str(e)}")
 
+@app.get("/fetch-fasta/{pdb_id}")
+async def fetch_fasta(pdb_id: str):
+    """
+    Fetch FASTA sequence for a given PDB ID using PDBFetcher class.
+    
+    Args:
+        pdb_id (str): The PDB ID (e.g., '1A3N').
+    
+    Returns:
+        dict: Contains the PDB ID and FASTA sequence, or raises an error if failed.
+    """
+    logger.info(f"Received request to fetch FASTA sequence for ID: {pdb_id}")
+    try:
+        fasta_sequence = pdb_fetcher.fetch_fasta_sequence(pdb_id.upper())
+        if not fasta_sequence:
+            logger.error(f"FASTA sequence not found for ID: {pdb_id}")
+            raise HTTPException(status_code=404, detail=f"FASTA sequence not found for ID: {pdb_id}")
+        logger.info(f"Successfully fetched FASTA sequence for ID: {pdb_id}")
+        return {"pdb_id": pdb_id, "fasta_sequence": fasta_sequence}
+    except Exception as e:
+        logger.error(f"Error fetching FASTA sequence for {pdb_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching FASTA sequence: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting FastAPI bridge server")

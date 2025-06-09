@@ -4,13 +4,39 @@
   margin: 0;
   padding: 0;
 }
+
 .overflow-x-auto::-webkit-scrollbar {
   height: 4px;
 }
+
 .overflow-x-auto::-webkit-scrollbar-thumb {
-  background: #4b5e6f;
+  background: #8b5cf6; /* Tailwind purple-500 */
   border-radius: 2px;
 }
+
 .overflow-x-auto::-webkit-scrollbar-track {
-  background: #2d3748;
+  background: #f3f4f6; /* Tailwind gray-100 */
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e5e7eb; /* Tailwind gray-200 */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background-color: #7c3aed; /* Tailwind purple-600 */
+  transition: width 0.3s ease-in-out;
+}
+
+table tr:hover {
+  background-color: #f3e8ff; /* Tailwind purple-100 */
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }

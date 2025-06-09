@@ -26,8 +26,7 @@ function GeminiChat() {
       setChatResponse({
         status: "error",
         error:
-          error.response?.data?.detail ||
-          "Failed to connect to chat server",
+          error.response?.data?.detail || "Failed to connect to chat server",
       });
     } finally {
       setIsChatLoading(false);
@@ -35,14 +34,14 @@ function GeminiChat() {
   };
 
   return (
-    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full mb-4">
-      <h2 className="text-lg font-semibold mb-3 text-cyan-300">
-        Protein-InfoMania
+    <div className="bg-white p-4 rounded-md border border-gray-200 w-full mb-4 shadow-sm">
+      <h2 className="text-lg font-semibold mb-3 text-purple-700">
+        Search for Protein Information
       </h2>
       <form onSubmit={handleChatSubmit}>
         <div className="mb-3">
           <label
-            className="block text-gray-200 text-sm mb-1"
+            className="block text-gray-800 text-sm mb-1"
             htmlFor="chatQuery"
           >
             Get Information
@@ -53,16 +52,16 @@ function GeminiChat() {
             value={chatQuery}
             onChange={(e) => setChatQuery(e.target.value)}
             placeholder="e.g., What is hemoglobin?"
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+            className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
           />
         </div>
         <button
           type="submit"
           disabled={isChatLoading}
-          className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${
+          className={`w-full py-2 bg-purple-600 text-white rounded text-sm font-medium ${
             isChatLoading
               ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-cyan-700"
+              : "hover:bg-purple-700"
           }`}
         >
           {isChatLoading ? "Sending..." : "Send"}
@@ -70,24 +69,21 @@ function GeminiChat() {
       </form>
       {isChatLoading && (
         <div className="mt-3">
-          <p className="text-gray-200 text-sm mb-2">Waiting for response...</p>
-          <div className="w-full bg-gray-700/50 rounded-full h-2">
-            <div
-              className="bg-cyan-600 h-2 rounded-full animate-pulse"
-              style={{ width: "50%" }}
-            ></div>
+          <p className="text-gray-800 text-sm mb-2">Waiting for response...</p>
+          <div className="progress-bar">
+            <div className="progress-bar-inner" style={{ width: "50%" }}></div>
           </div>
         </div>
       )}
       {chatResponse && (
         <div className="mt-3">
-          <h3 className="text-base font-semibold mb-2 text-cyan-400">
+          <h3 className="text-base font-semibold mb-2 text-purple-600">
             Response
           </h3>
           {chatResponse.status === "error" ? (
-            <p className="text-red-400 text-sm">{chatResponse.error}</p>
+            <p className="text-red-500 text-sm">{chatResponse.error}</p>
           ) : (
-            <p className="text-gray-200 text-sm whitespace-pre-wrap">
+            <p className="text-gray-800 text-sm whitespace-pre-wrap">
               {chatResponse.response}
             </p>
           )}
@@ -116,11 +112,13 @@ function SearchForm({ onSearch }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full"
+      className="bg-white p-4 rounded-md border border-gray-200 w-full shadow-sm"
     >
-      <h2 className="text-lg font-semibold mb-3 text-cyan-300">PDB Search</h2>
+      <h2 className="text-lg font-semibold mb-3 text-purple-700">
+        Search for PDB Search
+      </h2>
       <div className="mb-3">
-        <label className="block text-gray-200 text-sm mb-1" htmlFor="query">
+        <label className="block text-gray-800 text-sm mb-1" htmlFor="query">
           Search Term
         </label>
         <input
@@ -129,11 +127,11 @@ function SearchForm({ onSearch }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Hemoglobin"
-          className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+          className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
         />
       </div>
       <div className="mb-3">
-        <label className="block text-gray-200 text-sm mb-1" htmlFor="limit">
+        <label className="block text-gray-800 text-sm mb-1" htmlFor="limit">
           Limit (max results)
         </label>
         <input
@@ -142,28 +140,25 @@ function SearchForm({ onSearch }) {
           value={limit}
           onChange={(e) => setLimit(e.target.value)}
           min="1"
-          className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+          className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
         />
       </div>
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${
-          isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-cyan-700"
+        className={`w-full py-2 bg-purple-600 text-white rounded text-sm font-medium ${
+          isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-700"
         }`}
       >
         {isLoading ? "Searching..." : "Search"}
       </button>
       {isLoading && (
         <div className="mt-3">
-          <p className="text-gray-200 text-sm mb-2">
+          <p className="text-gray-800 text-sm mb-2">
             Loading content, please wait...
           </p>
-          <div className="w-full bg-gray-700/50 rounded-full h-2">
-            <div
-              className="bg-cyan-600 h-2 rounded-full animate-pulse"
-              style={{ width: "50%" }}
-            ></div>
+          <div className="progress-bar">
+            <div className="progress-bar-inner" style={{ width: "50%" }}></div>
           </div>
         </div>
       )}
@@ -198,12 +193,12 @@ function SearchResults({ result }) {
   };
 
   return (
-    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full mt-4">
-      <h2 className="text-lg font-semibold mb-3 text-cyan-300">
+    <div className="bg-white p-4 rounded-md border border-gray-200 w-full mt-4 shadow-sm">
+      <h2 className="text-lg font-semibold mb-3 text-purple-700">
         Search Results
       </h2>
       {result.status === "error" ? (
-        <div className="text-red-400 text-sm">
+        <div className="text-red-500 text-sm">
           <p>
             <strong>Error:</strong> {result.error}
           </p>
@@ -214,7 +209,7 @@ function SearchResults({ result }) {
           )}
         </div>
       ) : (
-        <div className="text-gray-200 text-sm">
+        <div className="text-gray-800 text-sm">
           <p className="mb-2">
             <strong>Search Term:</strong> {result.gemini_search_term}
           </p>
@@ -228,10 +223,11 @@ function SearchResults({ result }) {
               entries):
             </strong>
           </p>
-          <ul className="list-disc pl-5 mb-3 text-gray-300">
+          <ul className="list-disc pl-5 mb-3 text-gray-600">
             {result.experimental_data?.map((entry, index) => (
               <li key={index} className="mb-1">
-                <span className="text-cyan-400">{entry.rcsb_id}</span>: Method=
+                <span className="text-purple-600">{entry.rcsb_id}</span>:
+                Method=
                 {entry.method || "-"}, Details={entry.details || "-"}
               </li>
             )) || <li>No data available</li>}
@@ -241,15 +237,15 @@ function SearchResults({ result }) {
           </p>
           {tableData.headers.length > 0 && (
             <div className="mb-3">
-              <h3 className="text-base font-semibold mb-2 text-cyan-400">
+              <h3 className="text-base font-semibold mb-2 text-purple-600">
                 Data Table
               </h3>
               <div
                 className="overflow-x-auto overflow-y-auto"
                 style={{ maxHeight: "12rem" }}
               >
-                <table className="w-full text-left text-sm text-gray-200">
-                  <thead className="bg-gray-700/50 text-cyan-400">
+                <table className="w-full text-left text-sm text-gray-800">
+                  <thead className="bg-gray-100 text-purple-600">
                     <tr>
                       <th className="px-3 py-2">S.No</th>
                       {tableData.headers.map((header, index) => (
@@ -261,10 +257,7 @@ function SearchResults({ result }) {
                   </thead>
                   <tbody>
                     {tableData.rows.map((row, rowIndex) => (
-                      <tr
-                        key={rowIndex}
-                        className="border-t border-gray-600/30"
-                      >
+                      <tr key={rowIndex} className="border-t border-gray-200">
                         <td className="px-3 py-2">{rowIndex + 1}</td>
                         {tableData.headers.map((header, colIndex) => (
                           <td key={colIndex} className="px-3 py-2">
@@ -281,7 +274,7 @@ function SearchResults({ result }) {
           {result.csv_data && (
             <button
               onClick={handleDownloadCSV}
-              className="py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-gray-200 rounded text-sm font-medium"
+              className="py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium"
             >
               Download CSV
             </button>
@@ -309,7 +302,7 @@ function NGLViewer({
 
     if (!stageRef.current) {
       stageRef.current = new NGL.Stage(viewerRef.current, {
-        backgroundColor: "black",
+        backgroundColor: "white",
         cameraType: "perspective",
       });
 
@@ -385,14 +378,6 @@ function NGLViewer({
             radiusScale: 0.8,
           });
         }
-        if (viewerFeatures.licorice) {
-          structure.addRepresentation("licorice", {
-            sele: "not protein",
-            color,
-            radiusScale: 0.5,
-          });
-        }
-
         stageRef.current.autoView(1000);
       } catch (error) {
         console.error("Error loading PDB in NGL:", error);
@@ -425,12 +410,12 @@ function NGLViewer({
   }, [rotationActive]);
 
   return (
-    <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 w-full">
-      <h3 className="text-base font-semibold mb-2 text-cyan-300">
+    <div className="bg-white p-4 rounded-md border border-gray-200 w-full shadow-sm">
+      <h3 className="text-base font-semibold mb-2 text-purple-700">
         3D Structure Viewer
       </h3>
       {isPdbLoading ? (
-        <p className="text-gray-200 text-sm">Loading PDB content...</p>
+        <p className="text-gray-800 text-sm">Loading PDB content...</p>
       ) : pdbContent ? (
         <div>
           <div
@@ -440,7 +425,7 @@ function NGLViewer({
           />
         </div>
       ) : (
-        <p className="text-gray-300 text-sm">
+        <p className="text-gray-600 text-sm">
           Select a PDB ID to view 3D structure
         </p>
       )}
@@ -455,6 +440,7 @@ function Sidebar({
   setRotationActive,
   colorScheme,
   setColorScheme,
+  pdbIds,
 }) {
   const [form, setForm] = useState({
     sequence: "",
@@ -471,12 +457,15 @@ function Sidebar({
   const [resultFolderLocation, setResultFolderLocation] = useState("");
   const [firstPdbContent, setFirstPdbContent] = useState("");
   const [error, setError] = useState("");
+  const [mode, setMode] = useState("manual");
+  const [selectedFastaPdbId, setSelectedFastaPdbId] = useState("");
+  const [fastaLoading, setFastaLoading] = useState(false);
 
   const forceFieldMap = {
     amber03: "amber03",
     amber10: "amber10",
     amber96: "amber96",
-    "amber99sb": "amber99-sb",
+    amber99sb: "amber99-sb",
     amberfb15: "amber-fb15",
   };
 
@@ -488,7 +477,7 @@ function Sidebar({
   };
 
   const validateInputs = () => {
-    if (!validateSequence(form.sequence)) {
+    if (mode === "manual" && !validateSequence(form.sequence)) {
       setError("Please enter a valid amino acid sequence.");
       return false;
     }
@@ -499,6 +488,35 @@ function Sidebar({
     return true;
   };
 
+  const fetchFastaSequence = async (pdbId) => {
+    if (!pdbId) return;
+    setFastaLoading(true);
+    setError("");
+    try {
+      const response = await axios.get(
+        `http://localhost:8000/fetch-fasta/${pdbId}`
+      );
+      setForm((prev) => ({ ...prev, sequence: response.data.fasta_sequence }));
+      setInvalidSequence(false);
+    } catch (error) {
+      setError(
+        error.response?.data?.detail || "Failed to fetch FASTA sequence"
+      );
+      setForm((prev) => ({ ...prev, sequence: "" }));
+    } finally {
+      setFastaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mode === "pdb" && selectedFastaPdbId) {
+      fetchFastaSequence(selectedFastaPdbId);
+    } else if (mode === "manual") {
+      setForm((prev) => ({ ...prev, sequence: "" }));
+      setSelectedFastaPdbId("");
+    }
+  }, [mode, selectedFastaPdbId]);
+
   const sendSimulationRequest = async () => {
     const payload = {
       sequence: form.sequence.toUpperCase(),
@@ -508,7 +526,10 @@ function Sidebar({
     };
 
     try {
-      const response = await axios.post("http://localhost:3000/api/sample", payload);
+      const response = await axios.post(
+        "http://localhost:3000/api/sample",
+        payload
+      );
       console.log("Simulation Request HTTP Status Code:", response.status);
       console.log("Simulation Request Raw Response:", response.data);
       const processId = response.data.toString().trim();
@@ -530,7 +551,12 @@ function Sidebar({
     }
   };
 
-  const pollStatus = async (processId, maxDuration = 300, pollInterval = 3, maxInvalidResponses = 10) => {
+  const pollStatus = async (
+    processId,
+    maxDuration = 300,
+    pollInterval = 3,
+    maxInvalidResponses = 10
+  ) => {
     const startTime = Date.now();
     let invalidResponseCount = 0;
 
@@ -542,30 +568,47 @@ function Sidebar({
 
     while ((Date.now() - startTime) / 1000 < maxDuration) {
       try {
-        const response = await axios.get(`http://localhost:3000/api/status?id=${processId}`, {
-          headers: {
-            Accept: "text/plain, application/json, */*",
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-          timeout: 10000,
-        });
+        const response = await axios.get(
+          `http://localhost:3000/api/status?id=${processId}`,
+          {
+            headers: {
+              Accept: "text/plain, application/json, */*",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+            timeout: 10000,
+          }
+        );
 
         console.log("Poll HTTP Status:", response.status);
         console.log("Poll Response:", response.data);
 
         if (response.status === 200) {
           const newStatus = response.data.toString().trim();
-          if (newStatus && !["", "null", "undefined", "not found html"].includes(newStatus.toLowerCase())) {
+          if (
+            newStatus &&
+            !["", "null", "undefined", "not found html"].includes(
+              newStatus.toLowerCase()
+            )
+          ) {
             invalidResponseCount = 0;
             if (newStatus !== statusMessage) {
               setStatusMessage(newStatus);
               const statusLower = newStatus.toLowerCase();
-              if (statusLower.includes("waiting") || statusLower.includes("queue")) {
+              if (
+                statusLower.includes("waiting") ||
+                statusLower.includes("queue")
+              ) {
                 setSimulationProgress(10);
-              } else if (statusLower.includes("generating") || statusLower.includes("sample")) {
+              } else if (
+                statusLower.includes("generating") ||
+                statusLower.includes("sample")
+              ) {
                 setSimulationProgress(33);
-              } else if (statusLower.includes("minimizing") || statusLower.includes("minimize")) {
+              } else if (
+                statusLower.includes("minimizing") ||
+                statusLower.includes("minimize")
+              ) {
                 setSimulationProgress(66);
               } else if (
                 statusLower.includes("completed") ||
@@ -586,7 +629,10 @@ function Sidebar({
             }
           } else {
             invalidResponseCount++;
-            console.log(`Invalid response #${invalidResponseCount}:`, newStatus);
+            console.log(
+              `Invalid response #${invalidResponseCount}:`,
+              newStatus
+            );
           }
         } else if (response.status === 404) {
           invalidResponseCount++;
@@ -601,14 +647,18 @@ function Sidebar({
       }
 
       if (invalidResponseCount >= maxInvalidResponses) {
-        setError(`Too many invalid responses (${invalidResponseCount}). Aborting polling.`);
+        setError(
+          `Too many invalid responses (${invalidResponseCount}). Aborting polling.`
+        );
         return false;
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
     }
 
-    setError(`Polling timed out after ${maxDuration} seconds. Last status: ${statusMessage}`);
+    setError(
+      `Polling timed out after ${maxDuration} seconds. Last status: ${statusMessage}`
+    );
     return false;
   };
 
@@ -667,7 +717,9 @@ function Sidebar({
       if (window.showDirectoryPicker) {
         try {
           const dirHandle = await window.showDirectoryPicker();
-          const fileHandle = await dirHandle.getFileHandle(`${processId}.zip`, { create: true });
+          const fileHandle = await dirHandle.getFileHandle(`${processId}.zip`, {
+            create: true,
+          });
           const writable = await fileHandle.createWritable();
           await writable.write(content);
           await writable.close();
@@ -737,34 +789,69 @@ function Sidebar({
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "sequence") {
+    if (name === "sequence" && mode === "manual") {
       validateSequence(value);
     }
   };
 
   return (
-    <div className="w-64 bg-gray-900/90 p-4 flex flex-col h-full border-r border-gray-700/50">
+    <div className="w-64 bg-white p-4 flex flex-col h-full border-r border-gray-200 shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-cyan-300">Configuration</h2>
+        <h2 className="text-lg font-semibold text-purple-700">
+          Model Configuration
+        </h2>
       </div>
-      <style jsx>{`
-        .progress-bar {
-          width: 100%;
-          height: 8px;
-          background-color: #4a5568;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-        .progress-bar-inner {
-          height: 100%;
-          background-color: #00b7eb;
-          width: ${simulationProgress}%;
-          transition: width 0.3s ease-in-out;
-        }
-      `}</style>
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-3">
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setMode("manual")}
+            className={`flex-1 py-2 text-sm rounded ${
+              mode === "manual"
+                ? "bg-purple-600 text-white"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
+          >
+            User defined Sequence
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("pdb")}
+            className={`flex-1 py-2 text-sm rounded ${
+              mode === "pdb"
+                ? "bg-purple-600 text-white"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
+          >
+            Sequence fetched from PDB
+          </button>
+        </div>
+        {mode === "pdb" && (
+          <div>
+            <label className="block text-gray-800 text-sm mb-1" htmlFor="pdbId">
+              Select PDB ID
+            </label>
+            <select
+              id="pdbId"
+              value={selectedFastaPdbId}
+              onChange={(e) => setSelectedFastaPdbId(e.target.value)}
+              className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
+              disabled={fastaLoading || !pdbIds?.length}
+            >
+              <option value="">Select a PDB ID</option>
+              {pdbIds?.map((pdbId) => (
+                <option key={pdbId} value={pdbId}>
+                  {pdbId}
+                </option>
+              ))}
+            </select>
+            {!pdbIds?.length && (
+              <p className="text-red-500 text-xs mt-1">No PDB IDs available</p>
+            )}
+          </div>
+        )}
         <div>
-          <label className="block text-gray-200 text-sm mb-1" htmlFor="seq">
+          <label className="block text-gray-800 text-sm mb-1" htmlFor="seq">
             Sequence
           </label>
           <textarea
@@ -772,20 +859,29 @@ function Sidebar({
             name="sequence"
             value={form.sequence}
             onChange={handleFormChange}
-            placeholder="Amino Acid Sequence"
+            placeholder={
+              mode === "pdb"
+                ? "FASTA sequence will appear here"
+                : "Amino Acid Sequence"
+            }
             rows="2"
-            className={`w-full p-2 bg-gray-900/50 text-gray-200 border ${
-              invalidSequence ? "border-red-500" : "border-gray-600/50"
-            } rounded text-sm`}
-            disabled={loading}
+            className={`w-full p-2 bg-gray-50 text-gray-800 border ${
+              invalidSequence ? "border-red-500" : "border-gray-300"
+            } rounded text-sm focus:ring-purple-500 focus:border-purple-500`}
+            disabled={loading || mode === "pdb" || fastaLoading}
             required
           />
-          {invalidSequence && (
-            <p className="text-red-400 text-xs mt-1">Invalid Sequence</p>
+          {invalidSequence && mode === "manual" && (
+            <p className="text-red-500 text-xs mt-1">Invalid Sequence</p>
+          )}
+          {fastaLoading && (
+            <p className="text-purple-600 text-xs mt-1">
+              Fetching FASTA sequence...
+            </p>
           )}
         </div>
         <div>
-          <label className="block text-gray-200 text-sm mb-1" htmlFor="samples">
+          <label className="block text-gray-800 text-sm mb-1" htmlFor="samples">
             Samples
           </label>
           <input
@@ -797,13 +893,13 @@ function Sidebar({
             placeholder="No. of Samples"
             min="1"
             max="1000"
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+            className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
             disabled={loading}
             required
           />
         </div>
         <div>
-          <label className="block text-gray-200 text-sm mb-1" htmlFor="force">
+          <label className="block text-gray-800 text-sm mb-1" htmlFor="force">
             Force Field
           </label>
           <select
@@ -811,7 +907,7 @@ function Sidebar({
             name="forceField"
             value={form.forceField}
             onChange={handleFormChange}
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+            className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
             disabled={loading}
           >
             <option value="amber03">AMBER03</option>
@@ -823,7 +919,7 @@ function Sidebar({
         </div>
         <div>
           <label
-            className="block text-gray-200 text-sm mb-1"
+            className="block text-gray-800 text-sm mb-1"
             htmlFor="gridSplit"
           >
             Grid Split
@@ -833,7 +929,7 @@ function Sidebar({
             name="grid"
             value={form.grid}
             onChange={handleFormChange}
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+            className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
             disabled={loading}
           >
             <option value="1">1</option>
@@ -844,7 +940,7 @@ function Sidebar({
         </div>
         <div>
           <label
-            className="block text-gray-200 text-sm mb-1"
+            className="block text-gray-800 text-sm mb-1"
             htmlFor="minimize"
           >
             Minimize
@@ -854,7 +950,7 @@ function Sidebar({
             name="minimize"
             value={form.minimize}
             onChange={handleFormChange}
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+            className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
             disabled={loading}
           >
             <option value="0">None</option>
@@ -867,8 +963,8 @@ function Sidebar({
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-2 bg-cyan-600 text-gray-200 rounded text-sm font-medium ${
-            loading ? "opacity-50 cursor-not-allowed" : "hover:bg-cyan-700"
+          className={`w-full py-2 bg-purple-600 text-white rounded text-sm font-medium ${
+            loading ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-700"
           }`}
         >
           {loading ? (
@@ -884,93 +980,93 @@ function Sidebar({
           )}
         </button>
         {error && (
-          <p className="text-red-400 text-sm text-center mt-2">{error}</p>
+          <p className="text-red-500 text-sm text-center mt-2">{error}</p>
         )}
         {loading && (
           <div className="mt-2">
             <div className="progress-bar">
               <div className="progress-bar-inner"></div>
             </div>
-            <p className="text-cyan-400 text-sm text-center mt-1">
+            <p className="text-purple-600 text-sm text-center mt-1">
               {statusMessage || "Generating protein structure, please wait..."}
             </p>
           </div>
         )}
         {processId && (
-          <p className="text-gray-200 text-sm text-center mt-1">
+          <p className="text-gray-800 text-sm text-center mt-1">
             <strong>Process ID:</strong> {processId}
           </p>
         )}
         {statusMessage && !loading && (
-          <p className="text-gray-200 text-sm text-center mt-1">
+          <p className="text-gray-800 text-sm text-center mt-1">
             <strong>Status:</strong> {statusMessage}
           </p>
         )}
         {resultFolderLocation && (
-          <p className="text-gray-200 text-sm text-center mt-1">
+          <p className="text-gray-800 text-sm text-center mt-1">
             <strong>Results Saved At:</strong> {resultFolderLocation}
           </p>
         )}
-      </form>
-      {firstPdbContent && (
-        <div className="mt-4">
-          <h3 className="text-base font-semibold mb-2 text-cyan-300">
-            First Sample PDB Content
-          </h3>
-          <pre
-            className="bg-gray-900/50 text-gray-200 text-xs overflow-y-auto rounded p-2"
-            style={{ maxHeight: "12rem" }}
-          >
-            {firstPdbContent}
-          </pre>
-        </div>
-      )}
-      <div className="mt-4">
-        <h3 className="text-base font-semibold mb-2 text-cyan-300">
-          3D Viewer Controls
-        </h3>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {Object.keys(viewerFeatures).map((feature) => (
-            <button
-              key={feature}
-              type="button"
-              onClick={() =>
-                setViewerFeatures((prev) => ({
-                  ...prev,
-                  [feature]: !prev[feature],
-                }))
-              }
-              className={`py-1 px-3 text-sm rounded ${
-                viewerFeatures[feature]
-                  ? "bg-cyan-600 text-gray-200"
-                  : "bg-gray-700/50 text-gray-300"
-              } hover:bg-cyan-700`}
+        {firstPdbContent && (
+          <div className="mt-4">
+            <h3 className="text-base font-semibold mb-2 text-purple-700">
+              First Sample PDB Content
+            </h3>
+            <pre
+              className="bg-gray-50 text-gray-800 text-xs overflow-y-auto rounded p-2 border border-gray-200"
+              style={{ maxHeight: "12rem" }}
             >
-              {feature.charAt(0).toUpperCase() + feature.slice(1)}
-            </button>
-          ))}
+              {firstPdbContent}
+            </pre>
+          </div>
+        )}
+        <div className="mt-4">
+          <h3 className="text-base font-semibold mb-2 text-purple-700">
+            3D Viewer Controls
+          </h3>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {Object.keys(viewerFeatures).map((feature) => (
+              <button
+                key={feature}
+                type="button"
+                onClick={() =>
+                  setViewerFeatures((prev) => ({
+                    ...prev,
+                    [feature]: !prev[feature],
+                  }))
+                }
+                className={`py-1 px-3 text-sm rounded ${
+                  viewerFeatures[feature]
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-200 text-gray-800"
+                } hover:bg-purple-700 hover:text-white`}
+              >
+                {feature.charAt(0).toUpperCase() + feature.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="mb-3">
+            <label
+              className="block text-gray-800 text-sm mb-1"
+              htmlFor="colorScheme"
+            >
+              Color Scheme
+            </label>
+            <select
+              id="colorScheme"
+              value={colorScheme}
+              onChange={(e) => setColorScheme(e.target.value)}
+              className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
+            >
+              <option value="default">Default (Element)</option>
+              <option value="red">Red</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="yellow">Yellow</option>
+            </select>
+          </div>
         </div>
-        <div className="mb-3">
-          <label
-            className="block text-gray-200 text-sm mb-1"
-            htmlFor="colorScheme"
-          >
-            Color Scheme
-          </label>
-          <select
-            id="colorScheme"
-            value={colorScheme}
-            onChange={(e) => setColorScheme(e.target.value)}
-            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
-          >
-            <option value="default">Default (Element)</option>
-            <option value="red">Red</option>
-            <option value="blue">Blue</option>
-            <option value="green">Green</option>
-            <option value="yellow">Yellow</option>
-          </select>
-        </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -989,7 +1085,6 @@ function App() {
     label: false,
     surface: false,
     spacefill: false,
-    licorice: false,
   });
   const [rotationActive, setRotationActive] = useState(false);
   const [colorScheme, setColorScheme] = useState("default");
@@ -1059,7 +1154,7 @@ function App() {
   };
 
   return (
-    <div className="flex w-full min-h-screen">
+    <div className="flex w-full min-h-screen bg-gray-50">
       <div
         className="w-2/5 p-4 flex flex-col items-center overflow-y-auto"
         style={{ minWidth: "350px", maxWidth: "500px", zIndex: 2 }}
@@ -1081,15 +1176,16 @@ function App() {
           setRotationActive={setRotationActive}
           colorScheme={colorScheme}
           setColorScheme={setColorScheme}
+          pdbIds={result?.pdb_ids || []}
         />
       </div>
       <div
-        className="w-3/5 p-4 flex flex-col bg-gray-800/90"
+        className="w-3/5 p-4 flex flex-col bg-white shadow-sm"
         style={{ minWidth: "400px", zIndex: 0 }}
       >
-        <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4 max-h-32 overflow-y-auto">
-          <h3 className="text-base font-semibold mb-2 text-cyan-300">
-            PDB IDs
+        <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 max-h-32 overflow-y-auto shadow-sm">
+          <h3 className="text-base font-semibold mb-2 text-purple-700">
+            Click to display PDB IDs
           </h3>
           {result?.status === "success" && result.pdb_ids?.length > 0 ? (
             <div className="grid grid-cols-4 gap-2">
@@ -1099,8 +1195,8 @@ function App() {
                   onClick={() => setSelectedPdbId(pdbId)}
                   className={`p-2 rounded text-sm flex items-center ${
                     selectedPdbId === pdbId
-                      ? "bg-cyan-600 text-gray-200"
-                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                   }`}
                 >
                   <span className="mr-2">{index + 1}.</span>
@@ -1109,34 +1205,34 @@ function App() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-300 text-sm">No PDB IDs available</p>
+            <p className="text-gray-600 text-sm">No PDB IDs available</p>
           )}
         </div>
-        <div className="bg-gray-800/90 p-4 rounded-md border border-gray-700/50 mb-4">
-          <h3 className="text-base font-semibold mb-2 text-cyan-300">
+        <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 shadow-sm">
+          <h3 className="text-base font-semibold mb-2 text-purple-700">
             PDB Content: {selectedPdbId || "None Selected"}
           </h3>
           {isPdbLoading ? (
-            <p className="text-gray-200 text-sm">Content is being loaded...</p>
+            <p className="text-gray-800 text-sm">Content is being loaded...</p>
           ) : pdbFetchError ? (
-            <p className="text-red-400 text-sm">{pdbFetchError}</p>
+            <p className="text-red-500 text-sm">{pdbFetchError}</p>
           ) : pdbContent ? (
             <>
               <pre
-                className="text-gray-200 text-xs overflow-y-auto"
+                className="text-gray-800 text-xs overflow-y-auto bg-gray-50 border border-gray-200 rounded p-2"
                 style={{ maxHeight: "12rem" }}
               >
                 {pdbContent}
               </pre>
               <button
                 onClick={handleDownloadPdb}
-                className="mt-2 py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-gray-200 rounded text-sm font-medium"
+                className="mt-2 py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium"
               >
                 Download PDB
               </button>
             </>
           ) : (
-            <p className="text-gray-300 text-sm">
+            <p className="text-gray-600 text-sm">
               Select a PDB ID to view content
             </p>
           )}
