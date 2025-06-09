@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Papa from "papaparse";
 import * as NGL from "ngl";
-import "./App.css"; // Assuming you have a CSS file for styles
+import JSZip from "jszip";
+import "./App.css";
 
 function GeminiChat() {
   const [chatQuery, setChatQuery] = useState("");
@@ -26,7 +27,7 @@ function GeminiChat() {
         status: "error",
         error:
           error.response?.data?.detail ||
-          "Failed to connect to Gemini chat server",
+          "Failed to connect to chat server",
       });
     } finally {
       setIsChatLoading(false);
@@ -458,16 +459,279 @@ function Sidebar({
   const [form, setForm] = useState({
     sequence: "",
     samples: 10,
-    forceField: "amber03.xml",
+    forceField: "amber03",
     grid: "1",
     minimize: "0",
   });
   const [invalidSequence, setInvalidSequence] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [processId, setProcessId] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [simulationProgress, setSimulationProgress] = useState(0);
+  const [resultFolderLocation, setResultFolderLocation] = useState("");
+  const [firstPdbContent, setFirstPdbContent] = useState("");
+  const [error, setError] = useState("");
+
+  const forceFieldMap = {
+    amber03: "amber03",
+    amber10: "amber10",
+    amber96: "amber96",
+    "amber99sb": "amber99-sb",
+    amberfb15: "amber-fb15",
+  };
 
   const validateSequence = (value) => {
-    const validAminoAcids = /^[ACDEFGHIKLMNPQRSTVWY]*$/i;
-    setInvalidSequence(value && !validAminoAcids.test(value));
+    const validAminoAcids = /^[A-Za-z]*$/;
+    const isValid = value === "" || validAminoAcids.test(value);
+    setInvalidSequence(!isValid);
+    return isValid;
+  };
+
+  const validateInputs = () => {
+    if (!validateSequence(form.sequence)) {
+      setError("Please enter a valid amino acid sequence.");
+      return false;
+    }
+    if (form.samples < 1 || form.samples > 1000) {
+      setError("Number of samples must be between 1 and 1000.");
+      return false;
+    }
+    return true;
+  };
+
+  const sendSimulationRequest = async () => {
+    const payload = {
+      sequence: form.sequence.toUpperCase(),
+      sample: parseInt(form.samples),
+      forcefield: forceFieldMap[form.forceField.replace(".xml", "")],
+      grid: form.grid,
+    };
+
+    try {
+      const response = await axios.post("http://localhost:3000/api/sample", payload);
+      console.log("Simulation Request HTTP Status Code:", response.status);
+      console.log("Simulation Request Raw Response:", response.data);
+      const processId = response.data.toString().trim();
+      if (!processId) {
+        setError("Empty process ID received from server.");
+        console.log("Warning: Empty process ID");
+        return null;
+      }
+      console.log("Process ID received:", processId);
+      setProcessId(processId);
+      return processId;
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          "Failed to connect to the server for structure generation."
+      );
+      console.error("Error sending simulation request:", err);
+      return null;
+    }
+  };
+
+  const pollStatus = async (processId, maxDuration = 300, pollInterval = 3, maxInvalidResponses = 10) => {
+    const startTime = Date.now();
+    let invalidResponseCount = 0;
+
+    console.log("Starting status polling for process ID:", processId);
+    setStatusMessage("Waiting for server to register the process...");
+    setSimulationProgress(10);
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    while ((Date.now() - startTime) / 1000 < maxDuration) {
+      try {
+        const response = await axios.get(`http://localhost:3000/api/status?id=${processId}`, {
+          headers: {
+            Accept: "text/plain, application/json, */*",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+          timeout: 10000,
+        });
+
+        console.log("Poll HTTP Status:", response.status);
+        console.log("Poll Response:", response.data);
+
+        if (response.status === 200) {
+          const newStatus = response.data.toString().trim();
+          if (newStatus && !["", "null", "undefined", "not found html"].includes(newStatus.toLowerCase())) {
+            invalidResponseCount = 0;
+            if (newStatus !== statusMessage) {
+              setStatusMessage(newStatus);
+              const statusLower = newStatus.toLowerCase();
+              if (statusLower.includes("waiting") || statusLower.includes("queue")) {
+                setSimulationProgress(10);
+              } else if (statusLower.includes("generating") || statusLower.includes("sample")) {
+                setSimulationProgress(33);
+              } else if (statusLower.includes("minimizing") || statusLower.includes("minimize")) {
+                setSimulationProgress(66);
+              } else if (
+                statusLower.includes("completed") ||
+                statusLower.includes("complete") ||
+                statusLower.includes("done")
+              ) {
+                setSimulationProgress(100);
+                setStatusMessage("Simulation completed successfully!");
+                return true;
+              } else if (
+                statusLower.includes("error") ||
+                statusLower.includes("failed") ||
+                statusLower.includes("fail")
+              ) {
+                setError(`Simulation failed: ${newStatus}`);
+                return false;
+              }
+            }
+          } else {
+            invalidResponseCount++;
+            console.log(`Invalid response #${invalidResponseCount}:`, newStatus);
+          }
+        } else if (response.status === 404) {
+          invalidResponseCount++;
+          console.log("Process ID not found, retrying...");
+        } else {
+          invalidResponseCount++;
+          console.log("Unexpected HTTP status:", response.status);
+        }
+      } catch (err) {
+        invalidResponseCount++;
+        console.error("Poll error:", err);
+      }
+
+      if (invalidResponseCount >= maxInvalidResponses) {
+        setError(`Too many invalid responses (${invalidResponseCount}). Aborting polling.`);
+        return false;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+    }
+
+    setError(`Polling timed out after ${maxDuration} seconds. Last status: ${statusMessage}`);
+    return false;
+  };
+
+  const loadFirstSample = async (processId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_0000.pdb`,
+        {
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        }
+      );
+      console.log("First Sample HTTP Status:", response.status);
+      console.log("First Sample Response:", response.data.slice(0, 100), "...");
+      setFirstPdbContent(response.data);
+      return response.data;
+    } catch (err) {
+      setError("Failed to load first sample PDB.");
+      console.error("Error fetching first sample:", err);
+      return null;
+    }
+  };
+
+  const downloadData = async (processId, samples) => {
+    const zip = new JSZip();
+    const folder = zip.folder(processId).folder("sample");
+
+    for (let i = 0; i < samples; i++) {
+      const paddedNumber = i.toString().padStart(4, "0");
+      const sampleUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_${paddedNumber}.pdb`;
+      try {
+        const response = await axios.get(sampleUrl);
+        console.log(`Sample ${paddedNumber} HTTP Status:`, response.status);
+        if (response.data) {
+          folder.file(`sample_${paddedNumber}.pdb`, response.data);
+        }
+      } catch (err) {
+        console.error(`Error fetching sample ${paddedNumber}:`, err);
+      }
+    }
+
+    try {
+      const sampleOutUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sampled.out`;
+      const response = await axios.get(sampleOutUrl);
+      console.log("Sampled.out HTTP Status:", response.status);
+      if (response.data) {
+        folder.file("sampled.out", response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching sampled.out:", err);
+    }
+
+    try {
+      const content = await zip.generateAsync({ type: "blob" });
+      let savePath = "";
+
+      if (window.showDirectoryPicker) {
+        try {
+          const dirHandle = await window.showDirectoryPicker();
+          const fileHandle = await dirHandle.getFileHandle(`${processId}.zip`, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          savePath = dirHandle.name;
+        } catch (err) {
+          console.error("Error saving with File System Access API:", err);
+          setError("Failed to save results folder. Falling back to download.");
+        }
+      }
+
+      if (!savePath) {
+        const url = URL.createObjectURL(content);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${processId}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        savePath = "Browser Downloads";
+      }
+
+      setResultFolderLocation(savePath);
+      return true;
+    } catch (err) {
+      setError("Failed to generate or save ZIP file.");
+      console.error("Error generating ZIP:", err);
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateInputs()) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setProcessId("");
+    setStatusMessage("");
+    setSimulationProgress(0);
+    setResultFolderLocation("");
+    setFirstPdbContent("");
+
+    try {
+      const processId = await sendSimulationRequest();
+      if (!processId) {
+        setLoading(false);
+        return;
+      }
+
+      const success = await pollStatus(processId);
+      if (!success) {
+        setLoading(false);
+        return;
+      }
+
+      await loadFirstSample(processId);
+      await downloadData(processId, form.samples);
+    } catch (err) {
+      setError("Error in simulation workflow: " + err.message);
+      console.error("Simulation workflow error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFormChange = (e) => {
@@ -478,30 +742,26 @@ function Sidebar({
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (invalidSequence || !form.sequence.trim()) {
-      alert("Please enter a valid amino acid sequence");
-      return;
-    }
-    setLoading(true);
-    try {
-      // Placeholder for backend API call
-      console.log("Form submitted:", form);
-      // await axios.post('http://localhost:8000/generate', form);
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="w-64 bg-gray-900/90 p-4 flex flex-col h-full border-r border-gray-700/50">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-cyan-300">Configuration</h2>
       </div>
-
+      <style jsx>{`
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background-color: #4a5568;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .progress-bar-inner {
+          height: 100%;
+          background-color: #00b7eb;
+          width: ${simulationProgress}%;
+          transition: width 0.3s ease-in-out;
+        }
+      `}</style>
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-3">
         <div>
           <label className="block text-gray-200 text-sm mb-1" htmlFor="seq">
@@ -524,7 +784,6 @@ function Sidebar({
             <p className="text-red-400 text-xs mt-1">Invalid Sequence</p>
           )}
         </div>
-
         <div>
           <label className="block text-gray-200 text-sm mb-1" htmlFor="samples">
             Samples
@@ -536,12 +795,13 @@ function Sidebar({
             value={form.samples}
             onChange={handleFormChange}
             placeholder="No. of Samples"
+            min="1"
+            max="1000"
             className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
             disabled={loading}
             required
           />
         </div>
-
         <div>
           <label className="block text-gray-200 text-sm mb-1" htmlFor="force">
             Force Field
@@ -554,14 +814,13 @@ function Sidebar({
             className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
             disabled={loading}
           >
-            <option value="amber03.xml">AMBER03</option>
-            <option value="amber10.xml">AMBER10</option>
-            <option value="amber96.xml">AMBER96</option>
-            <option value="amber99sb.xml">AMBER99sb</option>
-            <option value="amberfb15.xml">AMBERFB15</option>
+            <option value="amber03">AMBER03</option>
+            <option value="amber10">AMBER10</option>
+            <option value="amber96">AMBER96</option>
+            <option value="amber99sb">AMBER99sb</option>
+            <option value="amberfb15">AMBERFB15</option>
           </select>
         </div>
-
         <div>
           <label
             className="block text-gray-200 text-sm mb-1"
@@ -583,7 +842,6 @@ function Sidebar({
             <option value="5">Any</option>
           </select>
         </div>
-
         <div>
           <label
             className="block text-gray-200 text-sm mb-1"
@@ -606,7 +864,6 @@ function Sidebar({
             <option value="20">Top 20</option>
           </select>
         </div>
-
         <button
           type="submit"
           disabled={loading}
@@ -614,56 +871,106 @@ function Sidebar({
             loading ? "opacity-50 cursor-not-allowed" : "hover:bg-cyan-700"
           }`}
         >
-          <i className="fas fa-play mr-2"></i>Generate
+          {loading ? (
+            <>
+              <i className="fas fa-spinner fa-spin mr-2"></i>
+              Generating...
+            </>
+          ) : (
+            <>
+              <i className="fas fa-play mr-2"></i>
+              Generate Multiple Structure
+            </>
+          )}
         </button>
+        {error && (
+          <p className="text-red-400 text-sm text-center mt-2">{error}</p>
+        )}
+        {loading && (
+          <div className="mt-2">
+            <div className="progress-bar">
+              <div className="progress-bar-inner"></div>
+            </div>
+            <p className="text-cyan-400 text-sm text-center mt-1">
+              {statusMessage || "Generating protein structure, please wait..."}
+            </p>
+          </div>
+        )}
+        {processId && (
+          <p className="text-gray-200 text-sm text-center mt-1">
+            <strong>Process ID:</strong> {processId}
+          </p>
+        )}
+        {statusMessage && !loading && (
+          <p className="text-gray-200 text-sm text-center mt-1">
+            <strong>Status:</strong> {statusMessage}
+          </p>
+        )}
+        {resultFolderLocation && (
+          <p className="text-gray-200 text-sm text-center mt-1">
+            <strong>Results Saved At:</strong> {resultFolderLocation}
+          </p>
+        )}
+      </form>
+      {firstPdbContent && (
         <div className="mt-4">
           <h3 className="text-base font-semibold mb-2 text-cyan-300">
-            3D Viewer Controls
+            First Sample PDB Content
           </h3>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {Object.keys(viewerFeatures).map((feature) => (
-              <button
-                key={feature}
-                type="button" // Prevent form submission
-                onClick={() =>
-                  setViewerFeatures((prev) => ({
-                    ...prev,
-                    [feature]: !prev[feature],
-                  }))
-                }
-                className={`py-1 px-3 text-sm rounded ${
-                  viewerFeatures[feature]
-                    ? "bg-cyan-600 text-gray-200"
-                    : "bg-gray-700/50 text-gray-300"
-                } hover:bg-cyan-700`}
-              >
-                {feature.charAt(0).toUpperCase() + feature.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          <div className="mb-3">
-            <label
-              className="block text-gray-200 text-sm mb-1"
-              htmlFor="colorScheme"
-            >
-              Color Scheme
-            </label>
-            <select
-              id="colorScheme"
-              value={colorScheme}
-              onChange={(e) => setColorScheme(e.target.value)}
-              className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
-            >
-              <option value="default">Default (Element)</option>
-              <option value="red">Red</option>
-              <option value="blue">Blue</option>
-              <option value="green">Green</option>
-              <option value="yellow">Yellow</option>
-            </select>
-          </div>
+          <pre
+            className="bg-gray-900/50 text-gray-200 text-xs overflow-y-auto rounded p-2"
+            style={{ maxHeight: "12rem" }}
+          >
+            {firstPdbContent}
+          </pre>
         </div>
-      </form>
+      )}
+      <div className="mt-4">
+        <h3 className="text-base font-semibold mb-2 text-cyan-300">
+          3D Viewer Controls
+        </h3>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {Object.keys(viewerFeatures).map((feature) => (
+            <button
+              key={feature}
+              type="button"
+              onClick={() =>
+                setViewerFeatures((prev) => ({
+                  ...prev,
+                  [feature]: !prev[feature],
+                }))
+              }
+              className={`py-1 px-3 text-sm rounded ${
+                viewerFeatures[feature]
+                  ? "bg-cyan-600 text-gray-200"
+                  : "bg-gray-700/50 text-gray-300"
+              } hover:bg-cyan-700`}
+            >
+              {feature.charAt(0).toUpperCase() + feature.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="mb-3">
+          <label
+            className="block text-gray-200 text-sm mb-1"
+            htmlFor="colorScheme"
+          >
+            Color Scheme
+          </label>
+          <select
+            id="colorScheme"
+            value={colorScheme}
+            onChange={(e) => setColorScheme(e.target.value)}
+            className="w-full p-2 bg-gray-900/50 text-gray-200 border border-gray-600/50 rounded text-sm"
+          >
+            <option value="default">Default (Element)</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
@@ -761,7 +1068,6 @@ function App() {
         <SearchForm onSearch={handleSearch} />
         {result && <SearchResults result={result} />}
       </div>
-      {/* Sidebar between search/results and NGL viewer */}
       <div
         className={`${
           isSidebarOpen ? "w-64" : "w-0"

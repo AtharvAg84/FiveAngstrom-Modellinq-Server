@@ -37,7 +37,7 @@ function Sidebar({ viewerFeatures, setViewerFeatures, handleFormSubmit, loading 
 
   return (
     <div className="sidebar">
-      <h3 className="text-cyan-300 text-base font-semibold mb-4">Configuration</h3>
+      {/* <h3 className="text-cyan-300 text-base font-semibold mb-4">Configuration</h3>
       <form onSubmit={submitForm} ref={configFormRef} className="sampling-form">
         <div className="form-field">
           <label htmlFor="seq">Sequence</label>
@@ -131,7 +131,7 @@ function Sidebar({ viewerFeatures, setViewerFeatures, handleFormSubmit, loading 
             <i className="fas fa-play"></i> Generate
           </button>
         </div>
-      </form>
+      </form> */}
 
       <h3 className="text-cyan-300 text-base font-semibold mt-6 mb-4">3D Visualization</h3>
       <div className="visualization-controls">
