@@ -426,7 +426,7 @@ function NGLViewer({
         </div>
       ) : (
         <p className="text-gray-600 text-sm">
-          Select a PDB ID or simulation sample to view 3D structure
+          Select a PDB ID to view 3D structure
         </p>
       )}
     </div>
@@ -441,7 +441,6 @@ function Sidebar({
   colorScheme,
   setColorScheme,
   pdbIds,
-  setSimulationPdbs,
 }) {
   const [form, setForm] = useState({
     sequence: "",
@@ -685,7 +684,6 @@ function Sidebar({
   const downloadData = async (processId, samples) => {
     const zip = new JSZip();
     const folder = zip.folder(processId).folder("sample");
-    const pdbFiles = [];
 
     for (let i = 0; i < samples; i++) {
       const paddedNumber = i.toString().padStart(4, "0");
@@ -695,10 +693,6 @@ function Sidebar({
         console.log(`Sample ${paddedNumber} HTTP Status:`, response.status);
         if (response.data) {
           folder.file(`sample_${paddedNumber}.pdb`, response.data);
-          pdbFiles.push({
-            name: `sample_${paddedNumber}.pdb`,
-            content: response.data,
-          });
         }
       } catch (err) {
         console.error(`Error fetching sample ${paddedNumber}:`, err);
@@ -717,7 +711,6 @@ function Sidebar({
     }
 
     try {
-      setSimulationPdbs(pdbFiles);
       const content = await zip.generateAsync({ type: "blob" });
       let savePath = "";
 
@@ -769,7 +762,6 @@ function Sidebar({
     setSimulationProgress(0);
     setResultFolderLocation("");
     setFirstPdbContent("");
-    setSimulationPdbs([]);
 
     try {
       const processId = await sendSimulationRequest();
@@ -1097,8 +1089,6 @@ function App() {
   const [rotationActive, setRotationActive] = useState(false);
   const [colorScheme, setColorScheme] = useState("default");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [simulationPdbs, setSimulationPdbs] = useState([]);
-  const [selectedSimulationPdb, setSelectedSimulationPdb] = useState("");
 
   const handleSearch = async (query, limit) => {
     try {
@@ -1110,8 +1100,6 @@ function App() {
       setSelectedPdbId("");
       setPdbContent("");
       setPdbFetchError("");
-      setSimulationPdbs([]);
-      setSelectedSimulationPdb("");
     } catch (error) {
       setResult({
         status: "error",
@@ -1120,8 +1108,6 @@ function App() {
       setSelectedPdbId("");
       setPdbContent("");
       setPdbFetchError("");
-      setSimulationPdbs([]);
-      setSelectedSimulationPdb("");
     }
   };
 
@@ -1145,13 +1131,6 @@ function App() {
         } finally {
           setIsPdbLoading(false);
         }
-      } else if (selectedSimulationPdb) {
-        const pdb = simulationPdbs.find(
-          (p) => p.name === selectedSimulationPdb
-        );
-        setPdbContent(pdb ? pdb.content : "");
-        setPdbFetchError("");
-        setIsPdbLoading(false);
       } else {
         setPdbContent("");
         setPdbFetchError("");
@@ -1160,17 +1139,15 @@ function App() {
     };
 
     fetchPdbContent();
-  }, [selectedPdbId, selectedSimulationPdb, simulationPdbs]);
+  }, [selectedPdbId]);
 
   const handleDownloadPdb = () => {
-    if (pdbContent && (selectedPdbId || selectedSimulationPdb)) {
+    if (pdbContent && selectedPdbId) {
       const blob = new Blob([pdbContent], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = selectedPdbId
-        ? `${selectedPdbId}.pdb`
-        : selectedSimulationPdb;
+      a.download = `${selectedPdbId}.pdb`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -1200,7 +1177,6 @@ function App() {
           colorScheme={colorScheme}
           setColorScheme={setColorScheme}
           pdbIds={result?.pdb_ids || []}
-          setSimulationPdbs={setSimulationPdbs}
         />
       </div>
       <div
@@ -1216,10 +1192,7 @@ function App() {
               {result.pdb_ids.map((pdbId, index) => (
                 <button
                   key={pdbId}
-                  onClick={() => {
-                    setSelectedPdbId(pdbId);
-                    setSelectedSimulationPdb("");
-                  }}
+                  onClick={() => setSelectedPdbId(pdbId)}
                   className={`p-2 rounded text-sm flex items-center ${
                     selectedPdbId === pdbId
                       ? "bg-purple-600 text-white"
@@ -1237,42 +1210,7 @@ function App() {
         </div>
         <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 shadow-sm">
           <h3 className="text-base font-semibold mb-2 text-purple-700">
-            Simulation Samples
-          </h3>
-          {simulationPdbs.length > 0 ? (
-            <div className="mb-3">
-              <label
-                className="block text-gray-800 text-sm mb-1"
-                htmlFor="simulationPdb"
-              >
-                Select Sample PDB
-              </label>
-              <select
-                id="simulationPdb"
-                value={selectedSimulationPdb}
-                onChange={(e) => {
-                  setSelectedSimulationPdb(e.target.value);
-                  setSelectedPdbId("");
-                }}
-                className="w-full p-2 bg-gray-50 text-gray-800 border border-gray-300 rounded text-sm focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="">Select a sample</option>
-                {simulationPdbs.map((pdb) => (
-                  <option key={pdb.name} value={pdb.name}>
-                    {pdb.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <p className="text-gray-600 text-sm">
-              Run a simulation to view samples
-            </p>
-          )}
-        </div>
-        <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 shadow-sm">
-          <h3 className="text-base font-semibold mb-2 text-purple-700">
-            PDB Content: {selectedPdbId || selectedSimulationPdb || "None Selected"}
+            PDB Content: {selectedPdbId || "None Selected"}
           </h3>
           {isPdbLoading ? (
             <p className="text-gray-800 text-sm">Content is being loaded...</p>
@@ -1295,7 +1233,7 @@ function App() {
             </>
           ) : (
             <p className="text-gray-600 text-sm">
-              Select a PDB ID or simulation sample to view content
+              Select a PDB ID to view content
             </p>
           )}
         </div>
