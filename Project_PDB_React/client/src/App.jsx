@@ -114,7 +114,7 @@ function SearchForm({ onSearch }) {
       className="bg-white p-4 rounded-md border border-gray-200 w-full mb-4 shadow-sm"
     >
       <h2 className="text-lg font-semibold mb-3 text-purple-700">
-        Search with Protien Name or  PDB ID Search
+        Search with Protien Name or  PDB ID
       </h2>
       <div className="mb-3">
         <label className="block text-gray-800 text-sm mb-1" htmlFor="query">
