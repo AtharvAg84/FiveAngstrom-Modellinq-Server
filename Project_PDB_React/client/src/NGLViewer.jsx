@@ -134,8 +134,8 @@ function NGLViewer({
 
   // Load structure when pdbContent changes
   useEffect(() => {
-    if (!stageRef.current) {
-      initStage();
+    if (!stageRef.current) { // Check if stage is initialized
+      initStage(); // If not, initialize it
     }
     loadStructure();
   }, [pdbContent, loadStructure, initStage]);
@@ -188,7 +188,7 @@ function NGLViewer({
           Select a PDB ID or simulation sample to view 3D structure
         </p>
       )}
-    </div>
+    </div>  
   );
 }
 

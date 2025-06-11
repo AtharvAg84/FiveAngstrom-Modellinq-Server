@@ -1080,7 +1080,7 @@ function App() {
 
   const handleDownloadPdb = () => {
     if (pdbContent && (selectedPdbId || currentSimulationIndex >= 0)) {
-      const blob = new Blob([pdbContent], { type: "text/plain" });
+      const blob = new Blob([pdbContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
