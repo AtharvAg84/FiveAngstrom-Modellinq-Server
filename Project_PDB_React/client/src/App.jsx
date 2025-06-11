@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import NGLViewer from "./NGLViewer";
 
+
 function GeminiChat() {
   const [chatQuery, setChatQuery] = useState("");
   const [chatResponse, setChatResponse] = useState(null);
@@ -370,8 +371,10 @@ function Sidebar({
   }, [mode, selectedFastaPdbId]);
 
   const sendSimulationRequest = async () => {
+    // Limit sequence to 50 characters
+    const limitedSequence = form.sequence.slice(0, 50);
     const payload = {
-      sequence: form.sequence.toUpperCase(),
+      sequence: limitedSequence.toUpperCase(),
       sample: parseInt(form.samples),
       forcefield: forceFieldMap[form.forceField.replace(".xml", "")],
       grid: form.grid,
@@ -654,9 +657,15 @@ function Sidebar({
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "sequence" && mode === "manual") {
-      validateSequence(value);
+    if (name === "sequence") {
+      // Limit input to 50 characters
+      const limitedValue = value.slice(0, 50);
+      setForm((prev) => ({ ...prev, [name]: limitedValue }));
+      if (mode === "manual") {
+        validateSequence(limitedValue);
+      }
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -731,6 +740,7 @@ function Sidebar({
                 : "Amino Acid Sequence"
             }
             rows="2"
+            maxLength={50}
             className={`w-full p-2 bg-gray-50 text-gray-800 border ${
               invalidSequence ? "border-red-500" : "border-gray-300"
             } rounded text-sm focus:ring-purple-500 focus:border-purple-500`}
@@ -943,6 +953,7 @@ function App() {
   const [pdbContent, setPdbContent] = useState("");
   const [pdbFetchError, setPdbFetchError] = useState("");
   const [isPdbLoading, setIsPdbLoading] = useState(false);
+  const [nglKey, setNglKey] = useState(0);
   const [viewerFeatures, setViewerFeatures] = useState({
     backbone: false,
     cartoon: false,
@@ -1147,8 +1158,10 @@ function App() {
                 <button
                   key={pdbId}
                   onClick={() => {
+                    resetViewer();
                     setSelectedPdbId(pdbId);
                     setCurrentSimulationIndex(-1);
+                    setNglKey(prev => prev + 1);
                   }}
                   className={`p-2 rounded text-sm flex items-center ${
                     selectedPdbId === pdbId
@@ -1243,6 +1256,8 @@ function App() {
           )}
         </div>
         <NGLViewer
+          key={nglKey}
+          // selectedPdbId={selectedPdbId}
           pdbContent={pdbContent}
           viewerFeatures={viewerFeatures}
           isPdbLoading={isPdbLoading}
