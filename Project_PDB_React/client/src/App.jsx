@@ -94,7 +94,7 @@ function GeminiChat() {
 
 function SearchForm({ onSearch }) {
   const [query, setQuery] = useState("");
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(4);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -114,7 +114,7 @@ function SearchForm({ onSearch }) {
       className="bg-white p-4 rounded-md border border-gray-200 w-full mb-4 shadow-sm"
     >
       <h2 className="text-lg font-semibold mb-3 text-purple-700">
-        Search with Protien Name or  PDB ID
+        Search with Protein Name or  PDB ID
       </h2>
       <div className="mb-3">
         <label className="block text-gray-800 text-sm mb-1" htmlFor="query">
@@ -814,13 +814,13 @@ function Sidebar({
           </select>
         </div>
         <div>
-          <label
+          {/* <label
             className="block text-gray-800 text-sm mb-1"
             htmlFor="minimize"
           >
             Minimize
-          </label>
-          <select
+          </label> */}
+          {/* <select
             id="minimize"
             name="minimize"
             value={form.minimize}
@@ -833,7 +833,7 @@ function Sidebar({
             <option value="10">Top 10</option>
             <option value="15">Top 15</option>
             <option value="20">Top 20</option>
-          </select>
+          </select> */}
         </div>
         <button
           type="submit"
