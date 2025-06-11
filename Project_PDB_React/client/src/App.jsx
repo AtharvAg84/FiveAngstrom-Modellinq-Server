@@ -4,7 +4,6 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import NGLViewer from "./NGLViewer";
 
-
 function GeminiChat() {
   const [chatQuery, setChatQuery] = useState("");
   const [chatResponse, setChatResponse] = useState(null);
@@ -112,7 +111,7 @@ function SearchForm({ onSearch }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-4 rounded-md border border-gray-200 w-full shadow-sm"
+      className="bg-white p-4 rounded-md border border-gray-200 w-full mb-4 shadow-sm"
     >
       <h2 className="text-lg font-semibold mb-3 text-purple-700">
         Search for PDB Search
@@ -131,7 +130,7 @@ function SearchForm({ onSearch }) {
         />
       </div>
       <div className="mb-3">
-        <label className="block text-gray-800 text-sm mb-1" htmlFor="limit">
+        <label className="block text-gray-700 text-sm mb-1" htmlFor="limit">
           Limit (max results)
         </label>
         <input
@@ -186,7 +185,7 @@ function SearchResults({ result }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${result.gemini_search_term || "search"}_output.csv`;
+      a.download = `${result.gemini_search_term || "search_result"}_output.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -294,6 +293,9 @@ function Sidebar({
   setColorScheme,
   pdbIds,
   setSimulationPdbs,
+  resetViewer,
+  setCurrentSimulationIndex,
+  setNglKey, // CHANGE: Added setNglKey prop
 }) {
   const [form, setForm] = useState({
     sequence: "",
@@ -371,7 +373,6 @@ function Sidebar({
   }, [mode, selectedFastaPdbId]);
 
   const sendSimulationRequest = async () => {
-    // Limit sequence to 50 characters
     const limitedSequence = form.sequence.slice(0, 50);
     const payload = {
       sequence: limitedSequence.toUpperCase(),
@@ -546,7 +547,7 @@ function Sidebar({
       const sampleUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_${paddedNumber}.pdb`;
       try {
         const response = await axios.get(sampleUrl);
-        console.log(`Sample ${paddedNumber} Content:`, response.data);
+        console.log(`Sample ${paddedNumber} Content:`, response.data.slice(0, 100), "..."); // CHANGE: Added logging
         if (response.data) {
           folder.file(`sample_${paddedNumber}.pdb`, response.data);
           pdbFiles.push({
@@ -572,12 +573,8 @@ function Sidebar({
 
     try {
       setSimulationPdbs(pdbFiles);
-      // Load NGL Stage after setting simulation PDBs
-      setTimeout(() => {
-        if (window.loadNGLStage) {
-          window.loadNGLStage();
-        }
-      }, 100);
+      console.log("Set simulationPdbs:", pdbFiles.length, "files"); // CHANGE: Added logging
+      setCurrentSimulationIndex(0); // CHANGE: Set initial index to display first sample
       const content = await zip.generateAsync({ type: "blob" });
       let savePath = "";
 
@@ -629,8 +626,11 @@ function Sidebar({
     setSimulationProgress(0);
     setResultFolderLocation("");
     setFirstPdbContent("");
-    setSimulationPdbs([]); // Clear previous simulation samples
-    // setCurrentSimulationIndex(-1); // Reset the sample index
+    setSimulationPdbs([]);
+    setCurrentSimulationIndex(-1);
+    resetViewer();
+    setNglKey((prev) => prev + 1); // CHANGE: Increment nglKey to force NGLViewer remount
+    console.log("Starting new simulation, reset states and incremented nglKey"); // CHANGE: Added logging
 
     try {
       const processId = await sendSimulationRequest();
@@ -658,7 +658,6 @@ function Sidebar({
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     if (name === "sequence") {
-      // Limit input to 50 characters
       const limitedValue = value.slice(0, 50);
       setForm((prev) => ({ ...prev, [name]: limitedValue }));
       if (mode === "manual") {
@@ -1019,6 +1018,7 @@ function App() {
 
   useEffect(() => {
     const fetchPdbContent = async () => {
+      console.log("useEffect: Starting PDB content fetch, selectedPdbId=", selectedPdbId, "currentSimulationIndex=", currentSimulationIndex); // CHANGE: Added logging
       if (selectedPdbId) {
         setIsPdbLoading(true);
         try {
@@ -1026,10 +1026,10 @@ function App() {
             `http://localhost:8000/fetch-pdb/${selectedPdbId}`
           );
           const content = response.data.pdb_content;
-          console.log("Fetched PDB Content length:", content.length);
-          console.log("PDB Content snippet:", content.slice(0, 1000));
-          console.log("Contains ATOM:", content.includes("ATOM"));
-          console.log("Contains HETATM:", content.includes("HETATM"));
+          console.log("Fetched PDB Content length:", content.length); // DEBUG
+          console.log("PDB Content snippet:", content.slice(0, 500)); // DEBUG
+          console.log("Contains ATOM:", content.includes("ATOM")); // DEBUG
+          console.log("Contains HETATM:", content.includes("HETATM")); // DEBUG
           if (!content.includes("ATOM") && !content.includes("HETATM")) {
             console.warn("PDB content lacks ATOM or HETATM records");
             setPdbFetchError(
@@ -1039,12 +1039,6 @@ function App() {
           } else {
             setPdbContent(content);
             setPdbFetchError("");
-            // Load NGL Stage after setting PDB content
-            setTimeout(() => {
-              if (window.loadNGLStage) {
-                window.loadNGLStage();
-              }
-            }, 100);
           }
         } catch (error) {
           console.error("Error fetching PDB content:", error);
@@ -1060,10 +1054,10 @@ function App() {
         simulationPdbs[currentSimulationIndex]
       ) {
         const content = simulationPdbs[currentSimulationIndex].content;
-        console.log("Simulation PDB Content length:", content.length);
-        console.log("Simulation PDB Content snippet:", content.slice(0, 1000));
-        console.log("Contains ATOM:", content.includes("ATOM"));
-        console.log("Contains HETATM:", content.includes("HETATM"));
+        console.log("Simulation PDB Content length:", content.length); // DEBUG
+        console.log("Simulation PDB Content snippet:", content.slice(0, 500)); // DEBUG
+        console.log("Contains ATOM:", content.includes("ATOM")); // DEBUG
+        console.log("Contains HETATM:", content.includes("HETATM")); // DEBUG
         if (!content.includes("ATOM") && !content.includes("HETATM")) {
           console.warn("Simulation PDB content lacks ATOM or HETATM records");
           setPdbFetchError("Invalid PDB file: No ATOM or HETATM records found");
@@ -1071,12 +1065,6 @@ function App() {
         } else {
           setPdbContent(content);
           setPdbFetchError("");
-          // Load NGL Stage after setting simulation PDB content
-          setTimeout(() => {
-            if (window.loadNGLStage) {
-              window.loadNGLStage();
-            }
-          }, 100);
         }
         setIsPdbLoading(false);
       } else {
@@ -1084,14 +1072,31 @@ function App() {
         setPdbFetchError("");
         setIsPdbLoading(false);
       }
+      console.log("useEffect completed: pdbContent length=", pdbContent.length || 0, "isPdbLoading=", isPdbLoading); // CHANGE: Added logging
     };
 
     fetchPdbContent();
   }, [selectedPdbId, currentSimulationIndex, simulationPdbs]);
 
+  // CHANGE: Moved loadNGLStage to a separate effect to ensure it runs after pdbContent updates
+  useEffect(() => {
+    if (pdbContent && !isPdbLoading) {
+      console.log("Triggering loadNGLStage with pdbContent length:", pdbContent.length); // CHANGE: Debug log
+      setTimeout(() => {
+        if (window.loadNGLStage) {
+          console.log("loadNGLStage called"); // CHANGE: Debug log
+          window.loadNGLStage();
+        } else {
+          console.warn("window.loadNGLStage is not defined");
+        }
+        }, 100);
+      }
+    }, [pdbContent, isPdbLoading]);
+
   const handleDownloadPdb = () => {
     if (pdbContent && (selectedPdbId || currentSimulationIndex >= 0)) {
-      const blob = new Blob([pdbContent], { type: 'text/plain' });
+      console.log("Downloading PDB, content length:", pdbContent.length); // DEBUG
+      const blob = new Blob([pdbContent], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1142,6 +1147,9 @@ function App() {
           setColorScheme={setColorScheme}
           pdbIds={result?.pdb_ids || []}
           setSimulationPdbs={setSimulationPdbs}
+          resetViewer={resetViewer}
+          setCurrentSimulationIndex={setCurrentSimulationIndex}
+          setNglKey={setNglKey} // CHANGE: Added setNglKey prop
         />
       </div>
       <div
@@ -1161,7 +1169,7 @@ function App() {
                     resetViewer();
                     setSelectedPdbId(pdbId);
                     setCurrentSimulationIndex(-1);
-                    setNglKey(prev => prev + 1);
+                    setNglKey((prev) => prev + 1);
                   }}
                   className={`p-2 rounded text-sm flex items-center ${
                     selectedPdbId === pdbId
@@ -1257,7 +1265,6 @@ function App() {
         </div>
         <NGLViewer
           key={nglKey}
-          // selectedPdbId={selectedPdbId}
           pdbContent={pdbContent}
           viewerFeatures={viewerFeatures}
           isPdbLoading={isPdbLoading}
