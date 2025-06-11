@@ -1,0 +1,47 @@
+The root cause is that the NGL viewer is not reloading the new PDB properly when the generate/search button is pressed again, even though the fetch and state update logic in App.jsx is correct.
+
+**Why?**
+- The NGLViewer component uses a `useRef` for the NGL `Stage` and only creates it once (when `stageRef.current` is null).
+- When you press the generate button again, the `pdbContent` prop changes, but the NGL `Stage` is not fully reset/recreated—only `removeAllComponents()` is called.
+- If the new PDB is very different (e.g., different atom count, chain, or format), NGL may not fully reset its internal state, especially if the viewer DOM node is not unmounted/remounted.
+- The `isReloading` state and the artificial delay only show a message, but do not force a true NGL viewer reset.
+
+**Proper Solution:**
+- You need to fully reset the NGL `Stage` when a new search is performed. The most robust way is to unmount and remount the NGLViewer component (or at least the DOM node used by NGL), so that a new NGL `Stage` is created for each new PDB.
+- This can be done by giving the NGLViewer a unique `key` prop based on the PDB content or a reload counter. When the key changes, React will unmount and remount the component, ensuring a fresh NGL stage.
+
+**How to fix:**
+1. In App.jsx, add a `nglKey` state that you increment every time a new search is performed.
+2. Pass `nglKey` as the `key` prop to `<NGLViewer ... />`.
+
+**Example fix for App.jsx:**
+```jsx
+const [nglKey, setNglKey] = useState(0);
+
+const handleFormSubmit = async (formData) => {
+  setLoading(true);
+  setError("");
+  setResponse(null);
+  setViewerFeatures({ ... }); // as before
+  setIsReloading(true);
+  await new Promise(res => setTimeout(res, 1200));
+  setIsReloading(false);
+  setNglKey(prev => prev + 1); // <-- increment key to force remount
+  // ...fetch logic as before...
+};
+
+// In render:
+<NGLViewer
+  key={nglKey}
+  pdbContent={response?.pdb_content}
+  viewerFeatures={viewerFeatures}
+  colorOptions={colorOptions}
+  isPdbLoading={loading}
+  isReloading={isReloading}
+/>
+```
+
+**Result:**  
+Every time you search/generate, the NGLViewer will be fully remounted, and the NGL Stage will be recreated, ensuring the new PDB is loaded cleanly.
+
+Let me know if you want me to apply this fix for you!
