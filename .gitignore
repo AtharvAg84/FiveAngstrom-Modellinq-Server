@@ -1,8 +1,6 @@
 .env
 __pycache__
 myenv
-ProtienDB/rcsb-restful-api-docs.json
-train_4M
 github
 node_modules
 linkCheck
