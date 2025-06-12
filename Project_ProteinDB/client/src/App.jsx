@@ -3,6 +3,64 @@ import axios from "axios";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import NGLViewer from "./NGLViewer";
+import { marked } from "marked";
+
+const markdownStyles = `
+  .markdown-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .markdown-content h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1rem 0;
+    color: #4B5563;
+  }
+  .markdown-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0.75rem 0;
+    color: #4B5563;
+  }
+  .markdown-content p {
+    margin: 0.75rem 0;
+    color: #1F2937;
+  }
+  .markdown-content ul, .markdown-content ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+  }
+  .markdown-content li {
+    margin: 0.375rem 0;
+  }
+  .markdown-content code {
+    background-color: #F3F4F6;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    color: #DC2626;
+  }
+  .markdown-content pre {
+    background-color: #F3F4F6;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+  }
+  .markdown-content blockquote {
+    border-left: 4px solid #E5E7EB;
+    padding-left: 1rem;
+    margin: 0.75rem 0;
+    color: #6B7280;
+  }
+  .markdown-content a {
+    color: #7C3AED;
+    text-decoration: underline;
+  }
+  .markdown-content a:hover {
+    color: #6D28D9;
+  }
+`;
 
 function GeminiChat() {
   const [chatQuery, setChatQuery] = useState("");
@@ -74,17 +132,22 @@ function GeminiChat() {
           </div>
         </div>
       )}
+
       {chatResponse && (
         <div className="mt-3">
           <h3 className="text-base font-semibold mb-2 text-purple-600">
             Response
           </h3>
+          <style>{markdownStyles}</style>
           {chatResponse.status === "error" ? (
             <p className="text-red-500 text-sm">{chatResponse.error}</p>
           ) : (
-            <p className="text-gray-800 text-sm whitespace-pre-wrap">
-              {chatResponse.response}
-            </p>
+            <div
+              className="text-gray-800 prose prose-sm max-w-none markdown-content rounded-lg bg-white p-4 shadow-sm border border-gray-100"
+              dangerouslySetInnerHTML={{
+                __html: marked(chatResponse.response),
+              }}
+            />
           )}
         </div>
       )}
@@ -114,7 +177,7 @@ function SearchForm({ onSearch }) {
       className="bg-white p-4 rounded-md border border-gray-200 w-full mb-4 shadow-sm"
     >
       <h2 className="text-lg font-semibold mb-3 text-purple-700">
-        Search with Protein Name or  PDB ID
+        Search with Protein Name or PDB ID
       </h2>
       <div className="mb-3">
         <label className="block text-gray-800 text-sm mb-1" htmlFor="query">
@@ -547,7 +610,11 @@ function Sidebar({
       const sampleUrl = `http://localhost:3000/api/pdb?path=Result/${processId}/sample/sample_${paddedNumber}.pdb`;
       try {
         const response = await axios.get(sampleUrl);
-        console.log(`Sample ${paddedNumber} Content:`, response.data.slice(0, 100), "..."); // CHANGE: Added logging
+        console.log(
+          `Sample ${paddedNumber} Content:`,
+          response.data.slice(0, 100),
+          "..."
+        ); // CHANGE: Added logging
         if (response.data) {
           folder.file(`sample_${paddedNumber}.pdb`, response.data);
           pdbFiles.push({
@@ -1018,7 +1085,12 @@ function App() {
 
   useEffect(() => {
     const fetchPdbContent = async () => {
-      console.log("useEffect: Starting PDB content fetch, selectedPdbId=", selectedPdbId, "currentSimulationIndex=", currentSimulationIndex); // CHANGE: Added logging
+      console.log(
+        "useEffect: Starting PDB content fetch, selectedPdbId=",
+        selectedPdbId,
+        "currentSimulationIndex=",
+        currentSimulationIndex
+      ); // CHANGE: Added logging
       if (selectedPdbId) {
         setIsPdbLoading(true);
         try {
@@ -1072,7 +1144,12 @@ function App() {
         setPdbFetchError("");
         setIsPdbLoading(false);
       }
-      console.log("useEffect completed: pdbContent length=", pdbContent.length || 0, "isPdbLoading=", isPdbLoading); // CHANGE: Added logging
+      console.log(
+        "useEffect completed: pdbContent length=",
+        pdbContent.length || 0,
+        "isPdbLoading=",
+        isPdbLoading
+      ); // CHANGE: Added logging
     };
 
     fetchPdbContent();
@@ -1081,7 +1158,10 @@ function App() {
   // CHANGE: Moved loadNGLStage to a separate effect to ensure it runs after pdbContent updates
   useEffect(() => {
     if (pdbContent && !isPdbLoading) {
-      console.log("Triggering loadNGLStage with pdbContent length:", pdbContent.length); // CHANGE: Debug log
+      console.log(
+        "Triggering loadNGLStage with pdbContent length:",
+        pdbContent.length
+      ); // CHANGE: Debug log
       setTimeout(() => {
         if (window.loadNGLStage) {
           console.log("loadNGLStage called"); // CHANGE: Debug log
@@ -1089,9 +1169,9 @@ function App() {
         } else {
           console.warn("window.loadNGLStage is not defined");
         }
-        }, 100);
-      }
-    }, [pdbContent, isPdbLoading]);
+      }, 100);
+    }
+  }, [pdbContent, isPdbLoading]);
 
   const handleDownloadPdb = () => {
     if (pdbContent && (selectedPdbId || currentSimulationIndex >= 0)) {
