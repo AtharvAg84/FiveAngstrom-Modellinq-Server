@@ -1,0 +1,17 @@
+# justfile in project-root/
+
+# Set shell so that we can use && and chaining properly
+set shell := ["bash", "-cu"]
+
+# Start the server with the Python virtual environment activated
+server:
+    source ../myenv/bin/activate && cd server && python3 bridge.py
+
+# Start the client
+client:
+    cd client && npm run dev
+
+# Start both (client in background)
+dev:
+    just client &
+    just server

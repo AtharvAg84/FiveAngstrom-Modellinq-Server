@@ -1,0 +1,19 @@
+set shell := ["bash", "-cu"]
+
+# Python backend
+server_backend_ProteinDB:
+    source ../myenv/bin/activate && cd server_backend_ProteinDB && python3 bridge.py
+
+# Frontend client
+client:
+    cd client && npm i && npm run dev
+
+# Other Node server
+server_backend_dncs:
+    cd server_backend_dncs && npm i && npm run dev
+
+# Run all three
+dev:
+      just client &
+      just server_backend_ProteinDB &
+      just server_backend_dncs
